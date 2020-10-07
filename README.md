@@ -30,14 +30,16 @@ The modules are written in such a way that all requests are idempotent. It essen
 
 ## Installation of SDK
 
-  * Clone the latest development repository that contains VPLEX Python SDK
+  * git clone https://github.com/dell/python-vplex.git  
+  
   * Export the python path with vplexapi
       export PYTHONPATH="{$PYTHONPATH}:<complete path of vplexapi>”
   * The above command works only on the current execution terminal. In order to make it persistent, we need to update the same export command in $HOME/.bashrc file followed by system reboot
 
 ## Installation of Ansible Modules
 
-  * Clone the latest development repository that contains the ansible modules
+  * git clone https://github.com/dell/ansible-vplex.git
+
   * Make ansible-vplex as the current working directory
     * cd ansible-vplex
 
