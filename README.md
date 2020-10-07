@@ -4,6 +4,12 @@ The Ansible Modules for Dell EMC VPLEX allow to provision the storage volume.
 
 The capabilities of Ansible modules are managing storage views, initiators, ports, consistency groups, virtual volumes, devices, extents and storage volumes and to get information of recently configured resources through gather facts. The options available for each capability are list, show, create, delete and modify. These tasks can be executed by running simple playbooks written in yaml syntax.
 
+
+## Support
+Ansible modules for VPLEX are supported by Dell EMC and are provided under the terms of the license attached to the source code.
+Dell EMC does not provide support for any source code modifications.
+For any Ansible module issues, questions or feedback, join the [Dell EMC Automation community](https://www.dell.com/community/Automation/bd-p/Automation).
+
 ## Supported Platforms
   * Dell VPLEX GeoSynchrony 6.2
 
