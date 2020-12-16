@@ -1,5 +1,8 @@
 """vplexapi connection establishment module"""
 
+import logging
+import re
+from json import loads
 
 try:
     import vplexapi  # pylint: disable=W0611
@@ -7,16 +10,46 @@ try:
 except ImportError:
     HAS_VPLEXAPI_SDK = False
 
+try:
+    import urllib3
+    HAS_URLLIB3 = True
+except ImportError:
+    HAS_URLLIB3 = False
 
-from json import loads
-import logging
-import re
-from vplexapi import Configuration
-from vplexapi import ApiClient
-from vplexapi.api import ClustersApi
-from vplexapi.rest import ApiException
-from urllib3.exceptions import MaxRetryError
+try:
+    import certifi  # pylint: disable=W0611
+    HAS_CERTIFI = True
+except ImportError:
+    HAS_CERTIFI = False
 
+
+class VplexapiModules():    # pylint:disable=R0903
+    """Class with vplexapi python sdk import statements"""
+    if HAS_VPLEXAPI_SDK:
+        from vplexapi.api import AmpApi  # pylint:disable=C0415
+        from vplexapi.api import ClustersApi  # pylint:disable=C0415
+        from vplexapi.api import ConsistencyGroupApi  # pylint:disable=C0415
+        from vplexapi.api import DevicesApi  # pylint:disable=C0415
+        from vplexapi.api import DistributedStorageApi  # pylint:disable=C0415
+        from vplexapi.api import ExportsApi  # pylint:disable=C0415
+        from vplexapi.api import ExtentApi  # pylint:disable=C0415
+        from vplexapi.api import StorageArrayApi  # pylint:disable=C0415
+        from vplexapi.api import StorageVolumeApi  # pylint:disable=C0415
+        from vplexapi.api import VirtualVolumeApi  # pylint:disable=C0415
+        from vplexapi.api import HardwarePortsApi  # pylint:disable=C0415
+        from vplexapi.api import MapsApi  # pylint:disable=C0415
+        from vplexapi.api import DataMigrationApi  # pylint:disable=C0415
+
+
+if HAS_VPLEXAPI_SDK:
+    from vplexapi import Configuration
+    from vplexapi import ApiClient
+    from vplexapi.api import ClustersApi, VersionApi
+    from vplexapi.rest import ApiException
+
+if HAS_URLLIB3:
+    from urllib3.exceptions import MaxRetryError
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 DOCUMENTATION = r'''
 ---
@@ -28,6 +61,19 @@ Check required libraries
 def has_vplexapi_sdk():
     """This method checks for Python SDK library"""
     return HAS_VPLEXAPI_SDK
+
+
+def external_library_check():
+    """This method checks for external libraries"""
+    module_dict = {'urllib3': HAS_URLLIB3, 'certifi': HAS_CERTIFI}
+    for key, value in module_dict.items():
+        if not value:
+            err_msg = ("Ansible modules for VPLEX require {0}"
+                       " library to be installed. Please install the"
+                       " library before using these modules.".format(
+                           key))
+            return (False, err_msg)
+    return (True, None)
 
 
 DOCUMENTATION = r'''
@@ -49,18 +95,34 @@ returns ApiClient object
 
 def config_vplexapi(module_params):
     """This method provide the vplexapi connection establishment"""
+    exit_code, msg = None, None
     host = module_params['vplexhost']
-    config = Configuration()
-    config.host = 'https://' + host + '/vplex/v2'
-    config.username = module_params['vplexuser']
-    config.password = module_params['vplexpassword']
-    config.verify_ssl = module_params['verifycert']
-    config.ssl_ca_cert = module_params['ssl_ca_cert']
-    config.assert_hostname = False
-    if config.verify_ssl and not config.ssl_ca_cert:
+    user = module_params['vplexuser']
+    password = module_params['vplexpassword']
+    cert = module_params['verifycert']
+    ssl_cert = module_params['ssl_ca_cert']
+
+    if not (all([host, user, password]) and cert in [True, False]):
+        msg = ('vplexhost, vplexuser, vplexpassword, verifycert '
+               'can not be empty')
+        exit_code = 403
+    if cert and not ssl_cert:
         msg = ('ssl_ca_cert file(CA Certificate in .pem format) is required'
                ' when verifycert(verify_ssl) is set to True')
-        return 495, msg
+        exit_code = 495
+    if exit_code and msg:
+        return exit_code, msg
+
+    config = Configuration()
+    config.host = 'https://' + host + '/vplex/v2'
+    config.username = user
+    config.password = password
+    config.verify_ssl = cert
+    config.ssl_ca_cert = ssl_cert
+    config.assert_hostname = False
+    # Enable VPlex api to collect the logs
+    config.debug = True
+
     client = ApiClient(configuration=config)
     try:
         cluster_client = ClustersApi(client)
@@ -179,6 +241,22 @@ def get_logger(module_name, log_file_name='dellemc_ansible_vplex.log',
 DOCUMENTATION = r'''
 ---
 
+This method is to get vplex setup version in use
+It accepts vplexclient.
+
+returns vplex setup version
+'''
+
+
+def get_vplex_setup(vplexclient):
+    """Gets VPLEX setup version"""
+    ver = VersionApi(vplexclient).get_versions()
+    return 'VPLEX setup in use ' + ver[0]['version']
+
+
+DOCUMENTATION = r'''
+---
+
 This method is to validate the name provided by the user
 name should not be more than certain number of characters
 name should not have special characters except -_
@@ -230,3 +308,26 @@ def error_msg(err_input):
                                     content['message'])
         return content['message']
     return err_input
+
+
+DOCUMENTATION = r'''
+---
+
+This method is used to check wether the status of the cluster is degraded.
+This occurs if cluster link is disabled.
+
+returns degraded cluster name
+'''
+
+
+def check_status_of_cluster(vplexclient):
+    """
+    Check the operational status of cluster
+    """
+    cluster_client = ClustersApi(vplexclient)
+    clus_details = cluster_client.get_clusters()
+    for cluster in clus_details:
+        cluster_info = cluster_client.get_cluster(cluster.name)
+        if cluster_info.operational_status == "degraded":
+            return cluster.name
+    return None

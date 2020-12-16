@@ -3,20 +3,15 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
     dellemc_ansible_vplex_utils as utils
-from vplexapi.api import StorageVolumeApi
-from vplexapi.rest import ApiException
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
-__metaclass__ = type  # pylint: disable=C0103
+__metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
                     'status': ['preview'],
-                    'supported_by': 'community'}
+                    'supported_by': 'community'
+                    }
 
 DOCUMENTATION = r'''
 ---
@@ -26,7 +21,8 @@ description:
 - Based on the user inputs performs claim, unclaim, update
   operations on storage volume
 extends_documentation_fragment: dellemc_vplex.dellemc_vplex
-author: Amit Uniyal (amit_u@dellteam.com) vplex.ansible@dell.com
+author:
+- Amit Uniyal (@euniami-dell) <vplex.ansible@dell.com>
 
 options:
   cluster_name:
@@ -77,8 +73,8 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    storage_volume_name: "{{ storage_volume_1 }}"
+    cluster_name: "cluster-1"
+    storage_volume_name: "ansible_st_vol"
     claimed_state: "claimed"
     state: "present"
 
@@ -88,8 +84,8 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    storage_volume_name: "{{ storage_volume_1 }}"
+    cluster_name: "cluster-1"
+    storage_volume_name: "ansible_st_vol"
     claimed_state: "unclaimed"
     state: "present"
 
@@ -99,8 +95,8 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    storage_volume_name: "{{ storage_volume_1 }}"
+    cluster_name: "cluster-1"
+    storage_volume_name: "ansible_st_vol"
     get_itls: true
     claimed_state: "claimed"
     state: "present"
@@ -111,9 +107,9 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    storage_volume_name: "{{ storage_volume_1 }}"
-    new_storage_volume_name: "{{ storage_volume_2 }}"
+    cluster_name: "cluster-1"
+    storage_volume_name: "ansible_st_vol"
+    new_storage_volume_name: "ansible_st_vol_new_name"
     thin_rebuild: true
     claimed_state: "claimed"
     state: "present"
@@ -199,12 +195,13 @@ volume_details:
             type: str
 '''
 
-LOG = utils.get_logger('dellemc_vplex_storage_volume', log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_storage_volume')
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
 
 class StorageVolumeModule:
     """Class with Storage Volume operations"""
+
     def __init__(self):
         """Define all parameters required by the module"""
         self.module_params = utils.get_vplex_management_host_parameters()
@@ -220,224 +217,279 @@ class StorageVolumeModule:
             mutually_exclusive=mutually_exclusive,
             required_one_of=required_one_of,
             supports_check_mode=False)
+
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
                                       "the vplexapi python library to be "
                                       "installed. Please install the library "
                                       "before using these modules.")
-        self.cluster_name = self.module.params['cluster_name']
-        self.vol_name = self.module.params['storage_volume_name']
-        self.vol_id = self.module.params['storage_volume_id']
+
         # Create the configuration instance to communicate with
         # vplexapi
         self.client = utils.config_vplexapi(self.module.params)
+
         # Validating the user inputs
         if isinstance(self.client, tuple):
             err_code, msg = self.client
             LOG.error(msg)
             self.module.fail_json(msg=msg)
+
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
-        (err_code, msg) = utils.verify_cluster_name(
-            self.client, self.cluster_name)
-        if err_code != 200:
-            if "Resource not found" in msg:
-                msg = "Could not find resource %s" % self.cluster_name
-            LOG.error(msg)
-            self.module.fail_json(msg=msg)
+        if self.module.params['cluster_name']:
+            cl_name = self.module.params['cluster_name']
+            (err_code, msg) = utils.verify_cluster_name(self.client, cl_name)
+            if err_code != 200:
+                if "Resource not found" in msg:
+                    msg = "Could not find resource {0}".format(cl_name)
+                LOG.error(msg)
+                self.module.fail_json(msg=msg)
+        api_obj = utils.VplexapiModules()
+        self.strg_client = api_obj.StorageVolumeApi(api_client=self.client)
+        self.cluster_name = self.module.params['cluster_name']
+        self.all_vols = None
 
-        self.storage_client = StorageVolumeApi(api_client=self.client)
+        LOG.info("Got VPLEX instance to access common lib methods "
+                 "on VPLEX")
 
-    def get_volume(self):
-        """Retrieve storage volume object by volume name"""
-        try:
-            res = self.storage_client.get_storage_volume(
-                cluster_name=self.cluster_name,
-                name=self.vol_name)
-            LOG.info("Got storage volume details %s from %s", self.vol_name,
-                     self.cluster_name)
-            LOG.debug("Volume details: %s", res)
-            return res
-        except ApiException as ex:
-            err_msg = ("Could not get storage volume {0} from {1} due to"
-                       " error: {2}".format(self.vol_name, self.cluster_name,
-                                            utils.error_msg(ex)))
-            LOG.error("%s\n%s", err_msg, ex)
-            self.module.fail_json(msg=err_msg)
-
-    def get_vol_by_id(self):
+    def get_volume_by_id(self, vol_id):
         """Retrieve storage volume object by volume id"""
+        LOG.info('Get volume by ID')
+        err_msg = ("Could not get storage volume {0} from "
+                   "{1}".format(vol_id, self.cluster_name))
         try:
-            res = self.storage_client.get_storage_volumes(
+            self.all_vols = self.strg_client.get_storage_volumes(
                 cluster_name=self.cluster_name)
-            LOG.debug("Obtained Volume details: %s", res)
-            data = [e for e in res if e.system_id == self.vol_id]
+            LOG.debug("Obtained Volume details: %s", self.all_vols)
+            data = [e for e in self.all_vols if e.system_id == vol_id]
             if len(data) > 0:
                 LOG.info("Got storage volume details %s by volume ID from %s",
                          data[0].name, self.cluster_name)
                 LOG.debug("Volume details: %s", data)
-                return data[0]
-            return None
-        except ApiException as ex:
-            err_msg = ("Could not get storage volume {0} from {1} due to"
-                       " error: {2}".format(
-                           self.vol_name, self.cluster_name,
-                           utils.error_msg(ex)))
-            LOG.error("%s\n%s", err_msg, ex)
+                return data[0], None
+            return None, err_msg
+        except utils.ApiException as err:
+            err_msg += " due to error: {0}".format(utils.error_msg(err))
+            LOG.error("%s\n%s", err_msg, err)
             self.module.fail_json(msg=err_msg)
 
-    def claim_storage_volume(self):
+    def get_volume_by_name(self, vol_name):
+        """Retrieve storage volume object by volume name"""
+        LOG.info('Get volume by name')
+        try:
+            res = self.strg_client.get_storage_volume(
+                cluster_name=self.cluster_name,
+                name=vol_name)
+            LOG.info("Got storage volume details %s from %s", vol_name,
+                     self.cluster_name)
+            LOG.debug("Volume details: %s", res)
+            return res, None
+        except utils.ApiException as err:
+            err_msg = ("Could not get storage volume {0} from {1} due to"
+                       " error: {2}".format(vol_name, self.cluster_name,
+                                            utils.error_msg(err)))
+            LOG.error("%s\n%s", err_msg, err)
+            # self.module.fail_json(msg=err_msg)
+            return None, err_msg
+
+    def claim_storage_volume(self, vol_name):
         """Claim storage volume"""
         try:
-            res = self.storage_client.claim_storage_volume(
+            res = self.strg_client.claim_storage_volume(
                 cluster_name=self.cluster_name,
-                name=self.vol_name, claim_payload={})
+                name=vol_name, claim_payload={})
             LOG.info("Claimed storage volume %s of %s",
-                     self.vol_name, self.cluster_name)
+                     vol_name, self.cluster_name)
             LOG.debug("Claimed storage volume details: %s", res)
             return res, True
-        except ApiException as ex:
+        except utils.ApiException as err:
             err_msg = ("Could not claim storage volume {0} from {1} due to"
                        " error: {2}".format(
-                           self.vol_name, self.cluster_name,
-                           utils.error_msg(ex)))
-            LOG.error("%s\n%s", err_msg, ex)
+                           vol_name, self.cluster_name,
+                           utils.error_msg(err)))
+            LOG.error("%s\n%s", err_msg, err)
             return err_msg, False
 
-    def unclaim_storage_volume(self):
+    def unclaim_storage_volume(self, vol_name):
         """Unclaim storage volume"""
         try:
-            res = self.storage_client.unclaim_storage_volume(
+            res = self.strg_client.unclaim_storage_volume(
                 cluster_name=self.cluster_name,
-                name=self.vol_name, unclaim_payload={})
+                name=vol_name, unclaim_payload={})
             LOG.info("Unclaimed storage volume %s of %s",
-                     self.vol_name, self.cluster_name)
+                     vol_name, self.cluster_name)
             LOG.debug("Unclaimed storage volume details: %s", res)
             return res, True
-        except ApiException as ex:
+        except utils.ApiException as err:
             err_msg = ("Could not unclaim storage volume {0} from {1} due to"
                        " error: {2}".format(
-                           self.vol_name, self.cluster_name,
-                           utils.error_msg(ex)))
-            LOG.error("%s\n%s", err_msg, ex)
+                           vol_name, self.cluster_name,
+                           utils.error_msg(err)))
+            LOG.error("%s\n%s", err_msg, err)
             return err_msg, False
 
-    def update_storage_volume(self, volume_payload):
+    def update_storage_volume(self, vol_name, volume_payload):
         """Update storage volume"""
+        LOG.debug("Update Details \n%s:\n\n%s", vol_name, volume_payload)
         try:
-            LOG.debug("Update Details \n%s:\n\n%s",
-                      self.vol_name, volume_payload)
-            res = self.storage_client.patch_storage_volume(
+            res = self.strg_client.patch_storage_volume(
                 cluster_name=self.cluster_name,
-                name=self.vol_name,
+                name=vol_name,
                 storage_volume_patch_payload=volume_payload)
             LOG.info("Updated storage volume %s of %s",
-                     self.vol_name, self.cluster_name)
+                     vol_name, self.cluster_name)
             LOG.debug("Updated storage volume details: %s", res)
             return res, True
-        except ApiException as ex:
+        except utils.ApiException as err:
             err_msg = ("Could not update storage volume {0} in {1} due to"
                        " error: {2}".format(
-                           self.vol_name, self.cluster_name,
-                           utils.error_msg(ex)))
-            LOG.error("%s\n%s", err_msg, ex)
+                           vol_name, self.cluster_name,
+                           utils.error_msg(err)))
+            LOG.error("%s\n%s", err_msg, err)
             return err_msg, False
 
-    def perform_module_operation(self):  # pylint: disable=R0912, R0915
+    def perform_module_operation(self):  # pylint: disable=R0912, R0914, R0915
         """perform module operations"""
-        def exit_module(data, change_flag):
+        def filter_itls(volume):
+            if get_itls is not None:
+                if get_itls:
+                    volume = volume['itls']
+                else:
+                    volume.pop('itls')
+            return volume
+
+        def exit_module(volume, change_flag):
             """module exit function"""
-            LOG.info("Exiting module")
-            data = utils.serialize_content(data)
-            if 'itls' in data and get_itls is False:
-                data.pop('itls')
+            volume = utils.serialize_content(volume)
+            if 'itls' in volume:
+                volume = filter_itls(volume)
             result = {
                 "changed": change_flag,
-                "storage_details": data['itls'] if get_itls else data
+                "storage_details": volume
             }
-            LOG.debug("Module result %s\n", result)
+            LOG.debug("Result %s\n", result)
             self.module.exit_json(**result)
-        claimed_state = self.module.params['claimed_state']
-        new_storage_volume_name = self.module.params['new_storage_volume_name']
-        thin_rebuild = self.module.params['thin_rebuild']
-        get_itls = self.module.params['get_itls']
-        vol_obj = None
-        # Validate the new storage volume name
-        if new_storage_volume_name:
-            char_len = '63'
-            status, msg = utils.validate_name(new_storage_volume_name,
-                                              char_len,
-                                              'new_storage_volume_name')
-            if not status:
-                LOG.error(msg)
-                self.module.fail_json(msg=msg)
-            else:
-                LOG.info(msg)
 
-        if self.vol_id:
-            vol_obj = self.get_vol_by_id()
-            if not vol_obj:
-                err_msg = ("Could not get storage volume {0} from {1}."
-                           " Requested volume id does not exists".format(
-                               self.vol_id, self.cluster_name))
+        def get_rename_payload(payload):
+            if vol_obj.use == 'unclaimed':
+                err_msg = 'Unclaimed Storage volume can not be renamed'
                 LOG.error(err_msg)
                 self.module.fail_json(msg=err_msg)
-            self.vol_name = vol_obj.name
-        else:
-            vol_obj = self.get_volume()
-            self.vol_name = vol_obj.name
-
-        changed = False
-        # verify if name is correct
-        if self.vol_name == '' or self.vol_name is None:
-            self.module.fail_json(msg="Storage volume name is not correct")
-
-        # form update payload
-        payload = []
-        if new_storage_volume_name:
-            payload.append(
-                {'op': 'replace', 'path': '/name',
-                 'value': new_storage_volume_name}
-            )
-        if thin_rebuild is not None:
-            if thin_rebuild != vol_obj.thin_rebuild:
+            if vol_obj.name != new_storage_vol_name:
+                err_msg = ("Could not rename storage volume {0} in {1} as "
+                           "name {2} is already in use".format(
+                               vol_obj.name, self.cluster_name,
+                               new_storage_vol_name))
+                if self.all_vols:
+                    for each in self.all_vols:
+                        if each.name == new_storage_vol_name:
+                            LOG.error("%s", err_msg)
+                            self.module.fail_json(msg=err_msg)
+                # Validate the new storage volume name
+                status, msg = utils.validate_name(
+                    new_storage_vol_name, 63, 'new_storage_volume_name')
+                if not status:
+                    LOG.error(msg)
+                    self.module.fail_json(msg=msg)
+                else:
+                    LOG.info(msg)
                 payload.append(
-                    {'op': 'replace', 'path': '/thin_rebuild',
-                     'value': thin_rebuild}
+                    {'op': 'replace', 'path': '/name',
+                     'value': new_storage_vol_name}
                 )
-        # Update storage volume
-        if len(payload) > 0:
-            if claimed_state == 'claimed':
-                # update storage volume field
-                LOG.info("Verify if storage volume is claimed or not")
-                if vol_obj.use != 'claimed':
-                    # volume must be claimed to be update
-                    self.claim_storage_volume()
-                vol_obj, changed = self.update_storage_volume(payload)
-                if not changed:
-                    self.module.fail_json(msg=vol_obj)
             else:
-                msg = ("Could not update storage volume. "
-                       "It must be claimed volume, claimed_state: claimed")
-                LOG.error(msg)
-                self.module.fail_json(msg=msg)
+                msg = 'The new storage volume and the existing '\
+                    'storage volume name are same.'
+                LOG.info(msg)
 
-        # claim storage volume
-        if claimed_state == 'claimed':
-            # if already claimed, return with changed=False
-            if vol_obj.use == 'unclaimed':
-                vol_obj, changed = self.claim_storage_volume()
-                # if claim fails, update user
-                if not changed:
-                    self.module.fail_json(msg=vol_obj)
+            return payload
 
-        # unclaim storage volume
+        state = self.module.params['state']
+        vol_name = self.module.params['storage_volume_name']
+        vol_id = self.module.params['storage_volume_id']
+        new_storage_vol_name = self.module.params['new_storage_volume_name']
+        get_itls = self.module.params['get_itls']
+        thin_rebuild = self.module.params['thin_rebuild']
+        claimed_state = self.module.params['claimed_state']
+
+        vol_obj = None
+        changed = False
+
+        if vol_name:
+            vol_obj, err_msg = self.get_volume_by_name(vol_name)
+        if not vol_obj and vol_id:
+            vol_obj, err_msg = self.get_volume_by_id(vol_id)
+        if err_msg:
+            LOG.error(err_msg)
+
+        if state == 'absent':
+            if vol_obj:
+                # storage volume can not be deleted
+                exit_module(vol_obj, changed)
+            else:
+                exit_module({}, changed)
+        # for next all operations we must need volume object
+        # if its not available at this stage, we should exit
+        if not vol_obj and err_msg:
+            LOG.error(err_msg)
+            self.module.fail_json(msg=err_msg)
+
+        # Unclaim volume
         if claimed_state == 'unclaimed':
-            if vol_obj.use != 'unclaimed':
-                vol_obj, changed = self.unclaim_storage_volume()
+            if vol_obj.use == 'claimed':
+                vol_obj, changed = self.unclaim_storage_volume(vol_obj.name)
                 # if unclaim fails, update user
                 if not changed:
                     self.module.fail_json(msg=vol_obj)
+                exit_module(vol_obj, changed)
+
+            elif vol_obj.use != 'unclaimed':
+                err_msg = ("Could not unclaim storage volume {0} from "
+                           "{1} as it is not claimed.".format(
+                               vol_obj.name, self.cluster_name))
+                LOG.error(err_msg)
+                self.module.fail_json(msg=err_msg)
+
+        # Claim volume
+        elif claimed_state == 'claimed' and vol_obj.use == 'unclaimed':
+            vol_obj, changed = self.claim_storage_volume(vol_obj.name)
+            # if claim fails, update user
+            if not changed:
+                self.module.fail_json(msg=vol_obj)
+
+        # Create update payload
+        payload = []
+        if new_storage_vol_name:
+            payload = get_rename_payload(payload)
+        if thin_rebuild is not None and thin_rebuild != vol_obj.thin_rebuild:
+            # if user wants update thin_rebuild
+            # and claimed_state is given as 'unclaimed'
+            if vol_obj.use == 'unclaimed':
+                msg = ("Could not update thin rebuild for {0} in"
+                       " {1} as it is unclaimed".format(
+                           vol_obj.name, self.cluster_name))
+                LOG.error(msg)
+                self.module.fail_json(msg=msg)
+            payload.append(
+                {'op': 'replace', 'path': '/thin_rebuild',
+                 'value': thin_rebuild}
+            )
+
+        # Update storage volume
+        if len(payload) > 0:
+            vol_obj, changed = self.update_storage_volume(
+                vol_obj.name, payload)
+            if not changed:
+                self.module.fail_json(msg=vol_obj)
+
         exit_module(vol_obj, changed)
 
 

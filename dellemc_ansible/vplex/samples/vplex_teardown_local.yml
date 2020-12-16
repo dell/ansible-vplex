@@ -1,0 +1,124 @@
+# VPLEX teardown
+
+---
+- name: Perform VPLEX teardown
+  hosts: localhost
+  connection: local
+
+  vars_files:
+    - vars/connection.yml
+    - vars/credentials.yml
+    - vars/input_teardown.yml
+
+  vars:
+    input: &connection_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+    devices: []
+    extents: []
+    volumes: []
+
+  tasks:
+    - name: Get the storage view
+      dellemc_vplex_storage_view:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ storage_view_name }}"
+        state: "present"
+      register: storage_view
+
+    - name: Fetch the virtual volume names
+      set_fact:
+        virtual_names: "{{ storage_view.storageview_details.virtual_volumes
+          | map(attribute='uri') | list }}"
+
+    - name: Delete the storage view
+      dellemc_vplex_storage_view:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ storage_view_name }}"
+        state: "absent"
+      register: storage_view
+
+    - name: Get details of the virtual volumes
+      dellemc_vplex_virtual_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        virtual_volume_name: "{{ item.split('/')[-1] }}"
+        state: present
+      loop: "{{ virtual_names[0:virtual_names|length] }}"
+      register: virt_det
+
+    - name: Fetch the supporting devices
+      set_fact:
+        device_list: "{{ virt_det['results'] | map(attribute=
+          'storage_details.supporting_device') | list }}"
+
+    - name: Get the device name
+      set_fact:
+        devices: "{{ devices + [item.split('/')[-1]] }}"
+      loop: "{{ device_list }}"
+
+    - name: Delete the virtual volumes
+      dellemc_vplex_virtual_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        virtual_volume_name: "{{ item.split('/')[-1] }}"
+        state: "absent"
+      loop: "{{ virtual_names }}"
+      register: volume_delete
+
+    - name: Get list of extents
+      dellemc_vplex_gatherfacts:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - extent
+      register: ext_list
+
+    - name: Get details of extent
+      dellemc_vplex_extent:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        extent_name: "{{ item }}"
+        state: "present"
+      loop: "{{ ext_list.Extents }}"
+      register: ext_det
+
+    - name: Get list of extents and storage volumes that matches the device
+      set_fact:
+        extents: "{{ extents + [item.extent_details.name] }}"
+        volumes: "{{ volumes + [item.extent_details.storage_volume] }}"
+      loop: "{{ ext_det.results }}"
+      when: (item.extent_details.used_by|length>0) and
+            (item.extent_details.used_by[0].split('/')[-1] in devices)
+
+    - name: Delete the devices
+      dellemc_vplex_device:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ item }}"
+        state: "absent"
+      loop: "{{ devices }}"
+      register: device_delete
+
+    - name: Delete the extents
+      dellemc_vplex_extent:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        extent_name: "{{ item }}"
+        state: "absent"
+      loop: "{{ extents }}"
+      register: extent_delete
+
+    - name: Unclaim the storage volumes
+      dellemc_vplex_storage_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_name: "{{ item.split('/')[-1] }}"
+        claimed_state: "unclaimed"
+        state: "present"
+      loop: "{{ volumes }}"
+      register: unclaim_vol

@@ -1,0 +1,5 @@
+---
+vplexhost: 'vplex-host'
+verifycert: false
+cluster_name: 'cluster-name'
+debug_mode: false

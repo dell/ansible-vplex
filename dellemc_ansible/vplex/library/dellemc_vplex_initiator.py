@@ -3,15 +3,9 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
-        dellemc_ansible_vplex_utils as utils
-from vplexapi.rest import ApiException
-from vplexapi.api import ExportsApi
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
+    dellemc_ansible_vplex_utils as utils
 
 __metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -33,8 +27,8 @@ description:
   Rediscover Initiators
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
-author: Mohana Priya Sivalingam (mohana_priya_sivalin@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Mohana Priya Sivalingam (@mohanapriya-dell) <vplex.ansible@dell.com>
 options:
   cluster_name:
     description:
@@ -97,9 +91,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        initiator_name: "{{ initiator_name }}"
-        port_wwn: "{{ port_wwn }}"
+        cluster_name: "cluster-1"
+        initiator_name: "ansible_init"
+        port_wwn: " 0x10000000c9b82e34"
         host_type: "hpux"
         registered: true
         state: "present"
@@ -110,8 +104,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        port_wwn: "{{ port_wwn }}"
+        cluster_name: "cluster-1"
+        port_wwn: "0x10000000c9b82e34"
         state: "present"
 
     - name: Get details of an Initiator with initiator_name
@@ -120,8 +114,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        initiator_name: "{{ initiator_name }}"
+        cluster_name: "cluster-1"
+        initiator_name: "ansible_init"
         state: "present"
 
     - name: Rename a registered Initiator name with port_wwn
@@ -130,9 +124,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        port_wwn: "{{ port_wwn }}"
-        new_initiator_name: "{{ new_initiator_name }}"
+        cluster_name: "cluster-1"
+        port_wwn: "0x10000000c9b82e34"
+        new_initiator_name: "ansibe_new_init"
         state: "present"
 
     - name: Rename a registered Initiator name with initiator_name
@@ -141,9 +135,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        initiator_name: "{{ initiator_name }}"
-        new_initiator_name: "{{ new_initiator_name }}"
+        cluster_name: "cluster-1"
+        initiator_name: "ansible_init"
+        new_initiator_name: "ansible_init_new"
         state: "present"
 
     - name: Unregister Initiator with port_wwn
@@ -152,8 +146,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        port_wwn: "{{ port_wwn }}"
+        cluster_name: "cluster-1"
+        port_wwn: "0x10000000c9b82e34"
         registered: false
         state: "present"
 
@@ -163,8 +157,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        initiator_name: "{{ initiator_name }}"
+        cluster_name: "cluster-1"
+        initiator_name: "ansible_init"
         registered: false
         state: "present"
 
@@ -174,7 +168,7 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
+        cluster_name: "cluster-1"
         state: "present"
 '''
 
@@ -215,7 +209,7 @@ Initiator Details:
             type: str
 '''
 
-LOG = utils.get_logger('dellemc_vplex_initiator', log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_initiator')
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
 
@@ -238,6 +232,12 @@ class VplexInitiator():    # pylint:disable=R0902
             mutually_exclusive=mutually_exclusive
         )
 
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
@@ -257,6 +257,8 @@ class VplexInitiator():    # pylint:disable=R0902
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
         (status, msg) = utils.verify_cluster_name(self.client, self.cl_name)
         if status != 200:
@@ -267,7 +269,8 @@ class VplexInitiator():    # pylint:disable=R0902
 
         # Create an instance to InitiatorApi to communicate with
         # vplexapi
-        self.initr = ExportsApi(api_client=self.client)
+        api_obj = utils.VplexapiModules()
+        self.initr = api_obj.ExportsApi(api_client=self.client)
 
         # Module parameters
         self.init_name = self.module.params['initiator_name']
@@ -296,7 +299,7 @@ class VplexInitiator():    # pylint:disable=R0902
                      self.cl_name)
             LOG.debug("Initiator Details:\n%s", initiator_details)
             return initiator_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get initiator {0} from {1} due to"
                        " error: {2}".format(initiator_name, self.cl_name,
                                             utils.error_msg(err)))
@@ -317,7 +320,7 @@ class VplexInitiator():    # pylint:disable=R0902
                      new_initiator_name, self.cl_name)
             LOG.debug("Initiator Details:\n%s", initiator_details)
             return initiator_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not rename initiator {0} to {1} in {2} due to"
                        " error: {3}".format(initiator_name, new_initiator_name,
                                             self.cl_name,
@@ -335,7 +338,7 @@ class VplexInitiator():    # pylint:disable=R0902
             LOG.info("Rediscovered initiators from %s", self.cl_name)
             LOG.debug("Initiator Details:\n%s", initiator_details)
             return initiator_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not discover initiators from {0} due to"
                        " error: {1}".format(self.cl_name,
                                             utils.error_msg(err)))
@@ -352,7 +355,7 @@ class VplexInitiator():    # pylint:disable=R0902
             LOG.info("Unregistered initiator %s from %s", initiator_name,
                      self.cl_name)
             return True
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not unregister initiator {0} from {1} due to"
                        " error: {2}".format(initiator_name, self.cl_name,
                                             utils.error_msg(err)))
@@ -369,7 +372,7 @@ class VplexInitiator():    # pylint:disable=R0902
             LOG.info("Registered initiator %s in %s", det.name, self.cl_name)
             LOG.debug("Initiator Details:\n%s", det)
             return det
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not register initiator in {0} due to"
                        " error: {1}".format(self.cl_name,
                                             utils.error_msg(err)))
@@ -396,20 +399,20 @@ class VplexInitiator():    # pylint:disable=R0902
         if not self.init_name and not self.port_wwn and not self.iscsi_name \
                 and not self.new_init_name:
             self.flag = 1
-        elif self.init_name and self.port_wwn and self.registered:
+        if self.init_name and self.port_wwn and self.registered:
             self.reg_flag = 1
         elif self.init_name and self.iscsi_name and self.registered:
             self.reg_flag = 1
-        elif self.init_name and self.new_init_name:
+        if self.init_name and self.new_init_name:
             self.rename_flag = 1
-        elif self.new_init_name and self.port_wwn:
+        if self.new_init_name and self.port_wwn:
             self.rename_flag = 1
         elif self.new_init_name and self.iscsi_name:
             self.rename_flag = 1
-        elif self.init_name and not self.registered and \
+        if self.init_name and not self.registered and \
                 self.registered is not None:
             self.unreg_flag = 1
-        elif self.port_wwn and not self.registered and \
+        if self.port_wwn and not self.registered and \
                 self.registered is not None:
             self.unreg_flag = 1
         elif self.iscsi_name and not self.registered and \
@@ -454,7 +457,9 @@ class VplexInitiator():    # pylint:disable=R0902
             for _, val in data.items():
                 if name == val:
                     self.temp_initiator = data['name']
-                    LOG.info("Temp Initiator %s", self.temp_initiator)
+                    msg = ("Actual initiator name for {0} is {1}".format(
+                        name, self.temp_initiator))
+                    LOG.info(msg)
                     return True
         return False
 
@@ -472,12 +477,11 @@ class VplexInitiator():    # pylint:disable=R0902
         init_dict = None
         changed = False
 
-        def exit_module(changed, init_details):
+        def exit_module(changed, initiator_details):
             self.result["changed"] = changed
-            if init_details:
-                temp_itr = utils.serialize_content(init_details)
-                init_details = temp_itr
-                self.result["initiator_details"] = init_details
+            if initiator_details:
+                initiator_details = utils.serialize_content(initiator_details)
+            self.result["initiator_details"] = initiator_details
             self.module.exit_json(**self.result)
 
         # Perform rediscover initiators and keep it for idempotency
@@ -500,10 +504,6 @@ class VplexInitiator():    # pylint:disable=R0902
         if self.init_name:
             self.validate_name(self.init_name, 'initiator_name')
 
-        # Validate the new initiator_name
-        if self.new_init_name:
-            self.validate_name(self.new_init_name, 'new_initiator_name')
-
         # Check for initiator/port_wwn/iscsi_name presence
         if self.flag:
             err_msg = ("Could not find initiator_name, port_wwn/iscsi_name"
@@ -512,191 +512,161 @@ class VplexInitiator():    # pylint:disable=R0902
             self.module.fail_json(msg=err_msg)
 
         # Check for port_wwn is valid
-        if state == "present" and self.port_wwn and not self.reg_flag \
+        if self.port_wwn and not self.reg_flag \
                 and not self.check_name(self.port_wwn, init_dict):
             err_msg = ("Could not match port_wwn {0} in {1}. Re-enter the"
                        " correct port_wwn".format(self.port_wwn,
                                                   self.cl_name))
             LOG.error(err_msg)
-            self.module.fail_json(msg=err_msg)
+            if state == "present":
+                self.module.fail_json(msg=err_msg)
+            else:
+                exit_module(changed, initiator_details)
 
         # Check for iscsi_name is valid
-        if state == "present" and self.iscsi_name and not self.reg_flag \
+        if self.iscsi_name and not self.reg_flag \
                 and not self.check_name(self.iscsi_name, init_dict):
             err_msg = ("Could not match iscsi_name {0} in {1}. Re-enter the"
                        " correct iscsi_name".format(self.iscsi_name,
                                                     self.cl_name))
             LOG.error(err_msg)
-            self.module.fail_json(msg=err_msg)
+            if state == "present":
+                self.module.fail_json(msg=err_msg)
+            else:
+                exit_module(changed, initiator_details)
 
         # Get the details of given initiator
         if self.init_name:
             init_details = self.get_initiator(self.init_name)
 
-        # Get the details of given new initiator
-        if self.new_init_name:
-            new_init_details = self.get_initiator(self.new_init_name)
+        # Check for initiator name is valid for operations except register
+        if self.init_name and init_details is None and not self.reg_flag:
+            err_msg = ("Could not find initiator_name {0} from {1}".format(
+                self.init_name, self.cl_name))
+            LOG.error(err_msg)
+            if state == "present":
+                self.module.fail_json(msg=err_msg)
+            else:
+                exit_module(changed, init_details)
 
         # Get the details of port_wwn/iscsi_name specific initiator
         if self.temp_initiator:
             temp_details = self.get_initiator(self.temp_initiator)
 
         # Register an initiator
-        if state == "present" and self.reg_flag:
-            # Check for idempotency
-            if self.check_name(self.init_name, init_dict):
-                if init_details.type is not None:
-                    if self.port_wwn:
-                        if self.port_wwn == init_details.port_wwn and \
-                                host_type == init_details.type:
-                            msg = ("Initiator {0} with port_wwn {1} in {2} is"
-                                   " already registered".format(
-                                       self.init_name, self.port_wwn,
-                                       self.cl_name))
-                            initiator_details = init_details
-                            LOG.info(msg)
-                            exit_module(changed, initiator_details)
-                        elif self.port_wwn == init_details.port_wwn and \
-                                host_type != init_details.type:
-                            err_msg = ("Initiator {0} with port_wwn {1} in"
-                                       " {2} is already registered with"
-                                       " different host_type {3}".format(
-                                           self.init_name, self.port_wwn,
-                                           self.cl_name, init_details.type))
-                            LOG.error(err_msg)
-                            self.module.fail_json(msg=err_msg)
-                        elif self.port_wwn != init_details.port_wwn:
-                            err_msg = ("Initiator {0} is already registered"
-                                       " with different port_wwn {1} in {2}."
-                                       " Please enter any other valid"
-                                       " initiator_name".format(
-                                           self.init_name,
-                                           init_details.port_wwn,
-                                           self.cl_name))
-                            self.module.fail_json(msg=err_msg)
-
-                    elif self.iscsi_name:
-                        if self.iscsi_name == init_details.iscsi_name and \
-                                host_type == init_details.type:
-                            msg = ("Initiator {0} with iscsi_name {1} in {2}"
-                                   " is already registered".format(
-                                       self.init_name, self.iscsi_name,
-                                       self.cl_name))
-                            initiator_details = init_details
-                            LOG.info(msg)
-                            exit_module(changed, initiator_details)
-                        elif self.iscsi_name == init_details.iscsi_name and \
-                                host_type != init_details.type:
-                            err_msg = ("Initiator {0} with iscsi_name {1}"
-                                       " in {2} is already registered with"
-                                       " different host_type {3}".format(
-                                           self.init_name, self.iscsi_name,
-                                           self.cl_name, init_details.type))
-                            LOG.error(err_msg)
-                            self.module.fail_json(msg=err_msg)
-                        elif self.iscsi_name != init_details.iscsi_name:
-                            err_msg = ("Initiator {0} is already registered"
-                                       " with different iscsi_name {1} in"
-                                       " {2}. Please enter any other valid"
-                                       " initiator_name".format(
-                                           self.init_name,
-                                           init_details.iscsi_name,
-                                           self.cl_name))
-                            self.module.fail_json(msg=err_msg)
-                elif init_details.type is None:
-                    err_msg = ("Could not register with initiator_name {0}"
-                               " in {1} as it is already in use. Please"
-                               " specify different initiator_name".format(
-                                   self.init_name, self.cl_name))
+        if self.reg_flag:
+            if init_details and init_details.type is not None:
+                if self.port_wwn and init_details.port_wwn != self.port_wwn:
+                    err_msg = ("Could not register initiator {0} as it is"
+                               " already registered with different port_wwn"
+                               " {1} in {2}. Please specify different"
+                               " initiator_name".format(
+                                   self.init_name, init_details.port_wwn,
+                                   self.cl_name))
                     LOG.error(err_msg)
                     self.module.fail_json(msg=err_msg)
+                elif self.iscsi_name and \
+                        init_details.iscsi_name != self.iscsi_name:
+                    err_msg = ("Could not register initiator {0} as it is"
+                               " already registered with different iscsi_name"
+                               " {1} in {2}. Please specify different"
+                               " initiator_name".format(
+                                   self.init_name, init_details.iscsi_name,
+                                   self.cl_name))
+                    LOG.error(err_msg)
+                    self.module.fail_json(msg=err_msg)
+            elif init_details and init_details.type is None:
+                err_msg = ("Could not register with initiator_name {0} in {1}"
+                           " as it is already in use. Plese specify different"
+                           " initiator_name".format(
+                               self.init_name, self.cl_name))
+                LOG.error(err_msg)
+                self.module.fail_json(msg=err_msg)
+            # Check register operation with respect to port_wwn
+            if self.check_name(self.port_wwn, init_dict):
+                temp_details = self.get_initiator(self.temp_initiator)
+                init_id = self.port_wwn
+                name_id = 'port_wwn'
+            # Check register operation with respect to iscsi_name
+            elif self.check_name(self.iscsi_name, init_dict):
+                temp_details = self.get_initiator(self.temp_initiator)
+                init_id = self.iscsi_name
+                name_id = 'iscsi_name'
+            if temp_details is not None and temp_details.type is not None:
+                if host_type == temp_details.type and \
+                        temp_details.name != self.init_name:
+                    err_msg = ("Could not register initiator of {0} {1} with"
+                               " initiator_name {2} in {3} as it is already"
+                               " registered with different name {4}".format(
+                                   name_id, init_id, self.init_name,
+                                   self.cl_name, temp_details.name))
+                    LOG.error(err_msg)
+                    self.module.fail_json(msg=err_msg)
+                elif host_type == temp_details.type and \
+                        temp_details.name == self.init_name:
+                    msg = ("Initiator {0} with {1} {2} in {3} is"
+                           " already registered".format(
+                               self.init_name, name_id, init_id,
+                               self.cl_name))
+                    initiator_details = temp_details
+                    LOG.info(msg)
+                elif host_type != temp_details.type:
+                    err_msg = ("Could not register initiator of {0} {1} with"
+                               " initiator_name {2} in {3} as it is already"
+                               " registered with different host_type"
+                               " {4}".format(
+                                   name_id, init_id, self.init_name,
+                                   self.cl_name, temp_details.type))
+                    LOG.error(err_msg)
+                    self.module.fail_json(msg=err_msg)
+
             # Perform registering the initiator
             else:
                 initiator_payload = self.get_initiator_payload(
                     self.iscsi_name, self.port_wwn, host_type, self.init_name)
                 initiator_details = self.register_initiator(
                     initiator_payload)
+                init_details = initiator_details
                 changed = True
+                self.temp_initiator = self.init_name
+                temp_details = initiator_details
 
         # Renaming an initiator
-        if state == "present" and self.rename_flag:
-            if self.init_name and init_details is None:
-                err_msg = ("Could not find initiator_name {0} from {1}".format(
-                    self.init_name, self.cl_name))
-                LOG.error(err_msg)
-                self.module.fail_json(msg=err_msg)
-            elif self.init_name and self.new_init_name:
-                if new_init_details is not None:
-                    if self.init_name == self.new_init_name:
-                        msg = ("initiator_name and new_initiator_name are"
-                               " same")
-                        initiator_details = init_details
-                        LOG.info(msg)
-                        exit_module(changed, initiator_details)
-                    else:
-                        err_msg = ("new_initiator_name {0} already exists in"
-                                   " {1}. Specify a different name".format(
-                                       self.new_init_name, self.cl_name))
-                        LOG.error(err_msg)
-                        self.module.fail_json(msg=err_msg)
+        if self.rename_flag:
+            if self.port_wwn or self.iscsi_name and self.new_init_name:
+                self.init_name = self.temp_initiator
+                init_details = temp_details
+            if self.new_init_name:
+                if self.init_name == self.new_init_name:
+                    msg = ("initiator_name and new_initiator_name are"
+                           " same")
+                    initiator_details = init_details
+                    LOG.info(msg)
                 else:
-                    self.temp_initiator = self.init_name
-            elif self.port_wwn and self.new_init_name:
-                if new_init_details is not None:
-                    if self.port_wwn == new_init_details.port_wwn:
-                        msg = ("Initiator is already visible with the same"
-                               " new_initiator_name {0} in {1}".format(
-                                   self.new_init_name, self.cl_name))
-                        initiator_details = new_init_details
-                        LOG.info(msg)
-                        exit_module(changed, initiator_details)
-                    else:
-                        err_msg = ("new_initiator_name {0} already exists in"
-                                   " {1}. Specify a different name".format(
-                                       self.new_init_name, self.cl_name))
+                    # Get the details of given new initiator
+                    new_init_details = self.get_initiator(self.new_init_name)
+                    if new_init_details is not None:
+                        err_msg = ("Could not rename initiator {0} in {1}."
+                                   " new_initiator_name {2} is already present"
+                                   ". Specify a different name".format(
+                                       self.init_name, self.cl_name,
+                                       self.new_init_name))
                         LOG.error(err_msg)
                         self.module.fail_json(msg=err_msg)
-            elif self.iscsi_name and self.new_init_name:
-                if new_init_details is not None:
-                    if self.iscsi_name == new_init_details.iscsi_name:
-                        msg = ("Initiator is already visible with the same"
-                               " new_initiator_name {0} in {1}".format(
-                                   self.new_init_name, self.cl_name))
-                        initiator_details = new_init_details
-                        LOG.info(msg)
-                        exit_module(changed, initiator_details)
+                    # Perform renaming the initiator
                     else:
-                        err_msg = ("new_initiator_name {0} already exists in"
-                                   " {1}. Specify a different name".format(
-                                       self.new_init_name, self.cl_name))
-                        LOG.error(err_msg)
-                        self.module.fail_json(msg=err_msg)
-            # Perform renaming the initiator
-            initiator_details = self.rename_initiator(
-                self.temp_initiator, self.new_init_name)
-            changed = True
-
-        # If state is absent for unregister and get initiator
-        if state == "absent" and not self.reg_flag and not self.rename_flag:
-            if self.port_wwn and not self.check_name(self.port_wwn, init_dict):
-                exit_module(changed, initiator_details)
-            elif self.iscsi_name and not self.check_name(
-                    self.iscsi_name, init_dict):
-                exit_module(changed, initiator_details)
-            elif self.temp_initiator:
-                temp_details = self.get_initiator(self.temp_initiator)
+                        # Validate the new initiator_name
+                        self.validate_name(self.new_init_name,
+                                           'new_initiator_name')
+                        initiator_details = self.rename_initiator(
+                            self.init_name, self.new_init_name)
+                        init_details = initiator_details
+                        changed = True
 
         # Unregister an initiator
         if self.unreg_flag:
             if self.init_name:
-                if state == "absent" and init_details is None:
-                    exit_module(changed, initiator_details)
-                elif state == "present" and init_details is None:
-                    err_msg = ("Could not find initiator_name {0} from"
-                               " {1}".format(self.init_name, self.cl_name))
-                    LOG.error(err_msg)
-                    self.module.fail_json(msg=err_msg)
-                elif init_details.type is None:
+                if init_details.type is None:
                     msg = ("Initiator {0} in {1} is already"
                            " unregistered".format(self.init_name,
                                                   self.cl_name))
@@ -719,17 +689,8 @@ class VplexInitiator():    # pylint:disable=R0902
         # Get initiator
         if not self.reg_flag and not self.unreg_flag \
                 and not self.rename_flag:
-            if state == "present" and self.port_wwn or self.iscsi_name and \
-                    not self.init_name:
+            if self.port_wwn or self.iscsi_name and not self.init_name:
                 init_details = temp_details
-            elif state == "present" and init_details is None:
-                err_msg = ("Could not get initiator {0} from {1}".format(
-                    self.init_name, self.cl_name))
-                LOG.error(err_msg)
-                self.module.fail_json(msg=err_msg)
-            elif state == "absent" and temp_details is not None:
-                init_details = temp_details
-
             initiator_details = init_details
 
         # Finally call the exit module

@@ -1,0 +1,7 @@
+---
+array_name: 'array-name'
+geometry: 'raid-1'
+port_wwn: 'initiator port-wwn'
+initiator_name: 'name of initiator to be registered'
+port_name: ['list of VPLEX front-end ports']
+storage_view_name: 'storage view name'

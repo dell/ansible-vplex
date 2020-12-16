@@ -1,0 +1,46 @@
+# Get the storage volumes of size 80G or greater from a specified cluster
+---
+- name: Get the storage volumes of size 80G or greater from a specified cluster
+  hosts: localhost
+  connection: local
+  vars_files:
+    - vars/connection.yml
+    - vars/credentials.yml
+  vars:
+    input: &connection_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+      cluster_name: "{{ cluster_name }}"
+
+  tasks:
+    - name: Get list of all storage volumes in a given cluster
+      dellemc_vplex_gatherfacts:
+        <<: *connection_vars
+        gather_subset:
+          - stor_vol
+      register: storage_volumes
+
+    - name: Get details of all storage volumes
+      dellemc_vplex_storage_volume:
+        <<: *connection_vars
+        storage_volume_name: "{{ item }}"
+        get_itls: false
+        state: present
+      loop: "{{ storage_volumes.StorageVolumes }}"
+      register: storage_vols
+
+    - name: Set empty volumes list
+      set_fact:
+        volumes: []
+
+    - name: Get storage volumes of size 80G or greater
+      set_fact:
+        volumes: "{{ volumes + [item.storage_details.name] }}"
+      loop: "{{ storage_vols.results }}"
+      # get capacity of 80 GB or more from both array
+      when: item.storage_details.capacity >= 85898952704
+
+    - debug:
+        var: volumes

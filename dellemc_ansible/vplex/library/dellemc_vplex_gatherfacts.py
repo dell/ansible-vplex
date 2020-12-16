@@ -3,24 +3,9 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
     dellemc_ansible_vplex_utils as utils
-from vplexapi.rest import ApiException
-from vplexapi.api import AmpApi
-from vplexapi.api import ClustersApi
-from vplexapi.api import ConsistencyGroupApi
-from vplexapi.api import DevicesApi
-from vplexapi.api import DistributedStorageApi
-from vplexapi.api import ExportsApi
-from vplexapi.api import ExtentApi
-from vplexapi.api import StorageArrayApi
-from vplexapi.api import StorageVolumeApi
-from vplexapi.api import VirtualVolumeApi
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 __metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -37,12 +22,12 @@ description:
 - Gathers the list of specified VPLEX Storage entities like the list
   of storage arrays, storage volumes, storage views, ports, initiators,
   virtual volumes, consistency groups, local/distributed devices, extents
-  ditributed consistency groups, distributed virtual volumes and
-  array management providers.
+  ditributed consistency groups, distributed virtual volumes, back end ports,
+  device migration jobs and array management providers.
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
-author: Mohana Priya Sivalingam (mohana_priya_sivalin@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Mohana Priya Sivalingam (@mohanapriya-dell) <vplex.ansible@dell.com>
 options:
   gather_subset:
     description:
@@ -61,10 +46,13 @@ options:
     - dist_cg - distributed consistency groups
     - dist_virt_vol - distributed virtual volumes
     - amp - array management providers
+    - be_port - back end ports
+    - device_mig_job - device migration jobs
     required: True
     type: list
     choices: [stor_array, stor_vol, stor_view, port, initiator, virt_vol, cg,
-              device, extent, dist_device, dist_cg, dist_virt_vol, amp]
+              device, extent, dist_device, dist_cg, dist_virt_vol, amp,
+              be_port, device_mig_job]
 '''
 
 EXAMPLES = r'''
@@ -81,7 +69,7 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - stor_array
 
@@ -91,9 +79,18 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - stor_vol
+
+- name: Get list of back end ports
+  dellemc_vplex_gatherfacts:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    gather_subset:
+      - be_port
 
 - name: Get list of ports
   dellemc_vplex_gatherfacts:
@@ -101,7 +98,7 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - port
 
@@ -111,7 +108,7 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - initiator
 
@@ -121,7 +118,7 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - stor_view
 
@@ -131,7 +128,7 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - virt_vol
 
@@ -141,7 +138,7 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - cg
 
@@ -151,7 +148,7 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - device
 
@@ -188,7 +185,7 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - amp
 
@@ -198,9 +195,18 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
+    cluster_name: "cluster-1"
     gather_subset:
       - extent
+
+- name: Get list of device migration jobs
+  dellemc_vplex_gatherfacts:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    gather_subset:
+      - device_mig_job
 
 '''
 
@@ -239,6 +245,27 @@ Ports:
     contains:
         name:
             description: Port names
+            type: str
+
+Back End Ports:
+    description: List of back end Ports in VPLEX
+    returned: When back end ports exist
+    type: complex
+    contains:
+        address:
+            description: Addres of the back end port
+            type: str
+        name:
+            description: Back end port name
+            type: str
+        director:
+            description: Director the port is attached to
+            type: str
+        role:
+            description: Type of the port
+            type: str
+        status:
+            description: Status of the Back end port
             type: str
 
 Initiators:
@@ -332,9 +359,18 @@ Extents:
         name:
             description: Extent names
             type: str
+
+Device Migration Jobs:
+    description: List of Device migration jobs
+    returned: When Device migration jobs exist
+    type: complex
+    contains:
+        name:
+            description: Device migration jobs names
+            type: str
 '''
 
-LOG = utils.get_logger('dellemc_vplex_gatherfacts', log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_gatherfacts')
 
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
@@ -352,6 +388,12 @@ class VplexGatherFacts():
             supports_check_mode=False
         )
 
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
@@ -362,6 +404,7 @@ class VplexGatherFacts():
         # Create the configuration instance to communicate with
         # vplexapi
         self.client = utils.config_vplexapi(self.module.params)
+        self.api_obj = utils.VplexapiModules()
 
         # Validating the user inputs
         if isinstance(self.client, tuple):
@@ -369,6 +412,8 @@ class VplexGatherFacts():
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
         if self.module.params['cluster_name']:
             cl_name = self.module.params['cluster_name']
@@ -396,11 +441,11 @@ class VplexGatherFacts():
         """Get the list of clusters in VPLEX"""
 
         try:
-            clusters = ClustersApi(api_client=self.client)
+            clusters = self.api_obj.ClustersApi(api_client=self.client)
             obj = clusters.get_clusters()
             self.logmsg('cluster', obj)
             return obj
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Clusters due to"
                        " error: {0}".format(utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
@@ -411,12 +456,13 @@ class VplexGatherFacts():
         in VPLEX"""
 
         try:
-            storage_array = StorageArrayApi(api_client=self.client)
+            storage_array = self.api_obj.StorageArrayApi(
+                api_client=self.client)
             obj = storage_array.get_storage_arrays(cluster_name)
             self.logmsg('Storage Array', obj, cluster_name)
             array_details = utils.serialize_content(obj)
             return self.parse_data(array_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Storage Arrays from {0} due to"
                        " error: {1}".format(
                            cluster_name, utils.error_msg(err)))
@@ -428,12 +474,13 @@ class VplexGatherFacts():
         in VPLEX"""
 
         try:
-            storage_volume = StorageVolumeApi(api_client=self.client)
+            storage_volume = self.api_obj.StorageVolumeApi(
+                api_client=self.client)
             obj = storage_volume.get_storage_volumes(cluster_name)
             self.logmsg('Storage Volume', obj, cluster_name)
             volume_details = utils.serialize_content(obj)
             return self.parse_data(volume_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Storage Volumes from {0} due to"
                        " error: {1}".format(
                            cluster_name, utils.error_msg(err)))
@@ -444,15 +491,30 @@ class VplexGatherFacts():
         """Get the list of ports on a specific cluster in VPLEX"""
 
         try:
-            port = ExportsApi(api_client=self.client)
+            port = self.api_obj.ExportsApi(api_client=self.client)
             obj = port.get_ports(cluster_name)
             self.logmsg('Port', obj, cluster_name)
             port_details = utils.serialize_content(obj)
             return self.parse_data(port_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Ports from {0} due to"
                        " error: {1}".format(cluster_name,
                                             utils.error_msg(err)))
+            LOG.error("%s\n%s\n", err_msg, err)
+            self.module.fail_json(msg=err_msg)
+
+    def get_be_port_list(self):
+        """Get the list of back end ports on a specific cluster in VPLEX"""
+
+        try:
+            be_port = self.api_obj.HardwarePortsApi(api_client=self.client)
+            obj = be_port.get_hardware_ports(role="back-end")
+            self.logmsg('Back end Port', obj)
+            port_details = utils.serialize_content(obj)
+            return port_details
+        except utils.ApiException as err:
+            err_msg = ("Could not get Back end Ports due to"
+                       " error: {0}".format(utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
             self.module.fail_json(msg=err_msg)
 
@@ -460,12 +522,12 @@ class VplexGatherFacts():
         """Get the list of initiators on a specific cluster in VPLEX"""
 
         try:
-            initiator = ExportsApi(api_client=self.client)
+            initiator = self.api_obj.ExportsApi(api_client=self.client)
             obj = initiator.get_initiator_ports(cluster_name)
             self.logmsg('Initiator', obj, cluster_name)
             initiator_details = utils.serialize_content(obj)
             return self.parse_data(initiator_details, initiator=True)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Initiators from {0} due to"
                        " error: {1}".format(
                            cluster_name, utils.error_msg(err)))
@@ -477,12 +539,12 @@ class VplexGatherFacts():
         in VPLEX"""
 
         try:
-            storage_view = ExportsApi(api_client=self.client)
+            storage_view = self.api_obj.ExportsApi(api_client=self.client)
             obj = storage_view.get_storage_views(cluster_name)
             self.logmsg('Storage View', obj, cluster_name)
             view_details = utils.serialize_content(obj)
             return self.parse_data(view_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Storage Views from {0} due to"
                        " error: {1}".format(
                            cluster_name, utils.error_msg(err)))
@@ -494,12 +556,13 @@ class VplexGatherFacts():
         in VPLEX"""
 
         try:
-            virtual_volume = VirtualVolumeApi(api_client=self.client)
+            virtual_volume = self.api_obj.VirtualVolumeApi(
+                api_client=self.client)
             obj = virtual_volume.get_virtual_volumes(cluster_name)
             self.logmsg('Virtual Volume', obj, cluster_name)
             virt_vol_details = utils.serialize_content(obj)
             return self.parse_data(virt_vol_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Virtual Volumes from {0} due to"
                        " error: {1}".format(
                            cluster_name, utils.error_msg(err)))
@@ -511,12 +574,13 @@ class VplexGatherFacts():
         in VPLEX"""
 
         try:
-            consistency_grp = ConsistencyGroupApi(api_client=self.client)
+            consistency_grp = self.api_obj.ConsistencyGroupApi(
+                api_client=self.client)
             obj = consistency_grp.get_consistency_groups(cluster_name)
             self.logmsg('Consistency Group', obj, cluster_name)
             consistency_grp_details = utils.serialize_content(obj)
             return self.parse_data(consistency_grp_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Consistency Groups from {0} due to"
                        " error: {1}".format(
                            cluster_name, utils.error_msg(err)))
@@ -527,12 +591,12 @@ class VplexGatherFacts():
         """Get the list of local devices on a specific cluster in VPLEX"""
 
         try:
-            device = DevicesApi(api_client=self.client)
+            device = self.api_obj.DevicesApi(api_client=self.client)
             obj = device.get_devices(cluster_name)
             self.logmsg('Device', obj, cluster_name)
             device_details = utils.serialize_content(obj)
             return self.parse_data(device_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get local Devices from {0} due to"
                        " error: {1}".format(
                            cluster_name, utils.error_msg(err)))
@@ -543,12 +607,13 @@ class VplexGatherFacts():
         """Get the list of (metro) distributed devices in VPLEX"""
 
         try:
-            dist_dev = DistributedStorageApi(api_client=self.client)
+            dist_dev = self.api_obj.DistributedStorageApi(
+                api_client=self.client)
             obj = dist_dev.get_distributed_devices()
             self.logmsg('Distributed Device', obj)
             dist_device_details = utils.serialize_content(obj)
             return self.parse_data(dist_device_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Distributed Devices due to"
                        " error: {0}".format(utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
@@ -558,12 +623,13 @@ class VplexGatherFacts():
         """Get the list of distributed consistency groups in VPLEX"""
 
         try:
-            dist_cgp = DistributedStorageApi(api_client=self.client)
+            dist_cgp = self.api_obj.DistributedStorageApi(
+                api_client=self.client)
             obj = dist_cgp.get_distributed_consistency_groups()
             self.logmsg('Distributed Consistency Group', obj)
             dist_cg_details = utils.serialize_content(obj)
             return self.parse_data(dist_cg_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Distributed Consistency Groups due to"
                        " error: {0}".format(utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
@@ -573,12 +639,13 @@ class VplexGatherFacts():
         """Get the list of distributed virtual volumes in VPLEX"""
 
         try:
-            dist_virt_volume = DistributedStorageApi(api_client=self.client)
+            dist_virt_volume = self.api_obj.DistributedStorageApi(
+                api_client=self.client)
             obj = dist_virt_volume.get_distributed_virtual_volumes()
             self.logmsg('Distributed Virtual Volume', obj)
             dist_virvol_details = utils.serialize_content(obj)
             return self.parse_data(dist_virvol_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Distributed Virtual Volumes due to"
                        " error: {0}".format(utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
@@ -589,12 +656,12 @@ class VplexGatherFacts():
         specific cluster in VPLEX"""
 
         try:
-            amps = AmpApi(api_client=self.client)
+            amps = self.api_obj.AmpApi(api_client=self.client)
             obj = amps.get_array_management_providers(cluster_name)
             self.logmsg('Array Management Provider', obj, cluster_name)
             amp_details = utils.serialize_content(obj)
             return self.parse_data(amp_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Array Management Providers from {0}"
                        " due to error: {1}".format(
                            cluster_name, utils.error_msg(err)))
@@ -605,15 +672,30 @@ class VplexGatherFacts():
         """Get the list of extents on a specific cluster in VPLEX"""
 
         try:
-            extent = ExtentApi(api_client=self.client)
+            extent = self.api_obj.ExtentApi(api_client=self.client)
             obj = extent.get_extents(cluster_name)
             self.logmsg('Extent', obj, cluster_name)
             device_details = utils.serialize_content(obj)
             return self.parse_data(device_details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get Extents from {0} due to"
                        " error: {1}".format(
                            cluster_name, utils.error_msg(err)))
+            LOG.error("%s\n%s\n", err_msg, err)
+            self.module.fail_json(msg=err_msg)
+
+    def get_device_migration_list(self):
+        """Get the list of device migration jobs in VPLEX"""
+
+        try:
+            device_mig = self.api_obj.DataMigrationApi(api_client=self.client)
+            obj = device_mig.get_device_migrations()
+            self.logmsg('Device migration job', obj)
+            device_mig_details = utils.serialize_content(obj)
+            return self.parse_data(device_mig_details)
+        except utils.ApiException as err:
+            err_msg = ("Could not get Device migration jobs due to"
+                       " error: {0}".format(utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
             self.module.fail_json(msg=err_msg)
 
@@ -649,6 +731,7 @@ class VplexGatherFacts():
             storage_array = []
             storage_volume = []
             port = []
+            be_port = []
             initiator = []
             storage_view = []
             virtual_volume = []
@@ -659,11 +742,12 @@ class VplexGatherFacts():
             dist_virt_vol = []
             amp = []
             extent = []
+            device_mig_job = []
 
             # Local list to avoid cluster name dependency for distributed cases
             temp_list = ['stor_array', 'stor_vol', 'port', 'initiator',
                          'stor_view', 'virt_vol', 'device', 'cg', 'amp',
-                         'extent']
+                         'extent', 'be_port', 'device_mig_job']
             for item in temp_list:
                 if item in subset:
                     nondistributed_check = True
@@ -678,6 +762,8 @@ class VplexGatherFacts():
                     storage_volume = self.get_storage_volume_list(cluster_name)
                 if 'port' in subset:
                     port = self.get_port_list(cluster_name)
+                if 'be_port' in subset:
+                    be_port = self.get_be_port_list()
                 if 'initiator' in subset:
                     initiator = self.get_initiator_list(cluster_name)
                 if 'stor_view' in subset:
@@ -694,6 +780,8 @@ class VplexGatherFacts():
                     dist_cg = self.get_distributed_consistency_group_list()
                 if 'dist_virt_vol' in subset:
                     dist_virt_vol = self.get_distributed_virtual_volume_list()
+                if 'device_mig_job' in subset:
+                    device_mig_job = self.get_device_migration_list()
                 if 'amp' in subset:
                     amp = self.get_array_management_provider_list(cluster_name)
                 if 'extent' in subset:
@@ -702,6 +790,7 @@ class VplexGatherFacts():
                     StorageArrays=storage_array,
                     StorageVolumes=storage_volume,
                     Ports=port,
+                    BackEndPorts=be_port,
                     Initiators=initiator,
                     StorageViews=storage_view,
                     VirtualVolumes=virtual_volume,
@@ -711,6 +800,7 @@ class VplexGatherFacts():
                     DistributedDevices=dist_device,
                     DistributedConsistencyGroups=dist_cg,
                     DistributedVirtualVolumes=dist_virt_vol,
+                    DeviceMigrationJob=device_mig_job,
                     ArrayManagementProviders=amp)
 
         else:
@@ -726,6 +816,7 @@ def get_vplex_gatherfacts_parameters():
                            choices=['stor_array',
                                     'stor_vol',
                                     'port',
+                                    'be_port',
                                     'initiator',
                                     'stor_view',
                                     'virt_vol',
@@ -735,6 +826,7 @@ def get_vplex_gatherfacts_parameters():
                                     'dist_device',
                                     'dist_cg',
                                     'dist_virt_vol',
+                                    'device_mig_job',
                                     'amp',
                                     ]),
 

@@ -1,0 +1,3 @@
+---
+geometry: 'raid-1'
+storage_view_name: "storage view name"   # Need to specify the storage view name

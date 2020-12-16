@@ -1,0 +1,43 @@
+# Get extent details
+
+---
+- name: Details of the Vplex host
+  hosts: localhost
+  connection: local
+  vars:
+    vplexuser: <**************>
+    vplexpassword: <**************>
+    vplexhost: <**************>
+    verifycert: false
+    cluster_name: "cluster-1"
+    extent_name: "ansible_ext_1"
+
+  tasks:
+    # This task gets the extent details
+    - name: Block to get the extent details
+      block:
+        - name: Get extent details
+          dellemc_vplex_extent:
+            vplexhost: "{{ vplexhost }}"
+            vplexuser: "{{ vplexuser }}"
+            vplexpassword: "{{ vplexpassword }}"
+            verifycert: "{{ verifycert }}"
+            cluster_name: "{{ cluster_name }}"
+            extent_name: "{{ extent_name }}"
+            state: "present"
+          register: device_out
+
+        # Displays the extent details
+        - debug:
+            var: device_out
+
+      rescue:
+        - name: Execute VPlex log collection script
+          command: |
+            python vplexlog_collection.py "{{ vplexhost }}" "{{ vplexuser }}"
+            "{{ vplexpassword }}"
+          register: stdout
+
+        # Displays the script output
+        - debug:
+            var: stdout

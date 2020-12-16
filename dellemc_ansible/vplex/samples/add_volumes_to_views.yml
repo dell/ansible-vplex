@@ -1,0 +1,180 @@
+# Creation of 100 virtual volumes and add those into two Storage Views equally
+
+---
+- name: Create 100 virtual volumes and add them into two Storage Views equally
+  hosts: localhost
+  connection: local
+
+  vars_files:
+    - vars/connection.yml
+    - vars/credentials.yml
+    - vars/view_details.yml
+
+  vars:
+    input: &connection_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+    extent_list: []
+
+  tasks:
+    - name: Get list of all storage volumes in a given cluster
+      dellemc_vplex_gatherfacts:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - stor_vol
+      register: storage_volumes
+
+    - name: Get details of all storage volumes
+      dellemc_vplex_storage_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_name: "{{ item }}"
+        get_itls: false
+        state: present
+      loop: "{{ storage_volumes.StorageVolumes }}"
+      register: storage_vols
+
+    - name: Set empty volumes list
+      set_fact:
+        volumes: []
+
+    - name: Get unclaimed storage volumes
+      set_fact:
+        volumes: "{{ volumes + [item.storage_details.name] }}"
+      loop: "{{ storage_vols.results }}"
+      when: item.storage_details.use == 'unclaimed'
+
+    - name: Claim Storage Volumes
+      dellemc_vplex_storage_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ item }}"
+        new_storage_volume_name: "sv_{{ ansible_date_time.epoch }}_{{ index }}"
+        claimed_state: "claimed"
+        state: "present"
+      with_items:
+        - "{{ volumes[0:200] }}"
+      loop_control:
+        index_var: index
+      register: volume
+
+    - name: Get the storage volumes names
+      set_fact:
+        stor_vol: "{{ volume['results'] | map(attribute=
+          'storage_details.name') | list }}"
+
+    - name: Create extents
+      dellemc_vplex_extent:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_name: "{{ item }}"
+        extent_name: "extent_ps_{{ cluster_name }}_{{ index }}"
+        state: "present"
+      loop: "{{ stor_vol }}"
+      loop_control:
+        index_var: index
+      register: extent_det
+
+    - name: Get the extent names
+      set_fact:
+        extent: "{{ extent_det['results'] | map(attribute=
+          'extent_details.name') | list }}"
+
+    - name: set_fact to split the extents for device creation
+      set_fact:
+        extent_list: "{{ extent_list }} +
+                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+      loop: "{{ range(0, extent|length, 2) | list }}"
+
+    - name: Create devices
+      dellemc_vplex_device:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ extent[0] }}_dev_{{ index }}"
+        extents: "{{ item }}"
+        extent_state: "present-in-device"
+        geometry: "{{ geometry }}"
+        state: "present"
+      with_items:
+        - "{{ extent_list }}"
+      loop_control:
+        index_var: index
+      register: device_det
+
+    - name: Get the device names
+      set_fact:
+        device: "{{ device_det['results'] | map(attribute=
+          'device_details.name') | list }}"
+
+    - name: Get device details
+      dellemc_vplex_device:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ item }}"
+        state: 'present'
+      register: get_device
+      loop: "{{ device }}"
+      until: get_device.device_details.rebuild_status != "rebuilding"
+      retries: 100
+      delay: 5
+
+    - name: Create virtual volumes
+      dellemc_vplex_virtual_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        virtual_volume_name: "ansible_loc_vol_{{ index }}"
+        supporting_device_name: "{{ item }}"
+        thin_enable: true
+        state: "present"
+      with_items:
+        - "{{ device }}"
+      loop_control:
+        index_var: index
+      register: virt_vol
+
+    - name: Get the virtual volume names
+      set_fact:
+        virtual_volumes: "{{ virt_vol['results'] | map(attribute=
+          'storage_details.name') | list }}"
+
+    - name: Register initiator
+      dellemc_vplex_initiator:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        initiator_name: "{{ initiator_name }}_{{ index }}"
+        port_wwn: "{{ item }}"
+        registered: true
+        state: "present"
+      loop: "{{ port_wwn }}"
+      loop_control:
+        index_var: index
+      register: initiator
+
+    - name: Create storage view sv1 and add 50 virtual volumes
+      dellemc_vplex_storage_view:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ storage_view_name }}_1"
+        ports: "{{ port_name }}"
+        initiators: "{{ initiator_name }}_1"
+        initiator_state: "present-in-view"
+        virtual_volumes: "{{ virtual_volumes[0:50] }}"
+        virtual_volume_state: "present-in-view"
+        state: "present"
+      register: storage_view_1
+
+    - name: Create storage view sv2 and add remaining 50 virtual volumes
+      dellemc_vplex_storage_view:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ storage_view_name }}_2"
+        ports: "{{ port_name }}"
+        initiators: "{{ initiator_name }}_2"
+        initiator_state: "present-in-view"
+        virtual_volumes: "{{ virtual_volumes[50:100] }}"
+        virtual_volume_state: "present-in-view"
+        state: "present"
+      register: storage_view_2

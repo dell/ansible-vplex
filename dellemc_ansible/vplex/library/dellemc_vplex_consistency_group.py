@@ -3,15 +3,9 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
-import urllib3
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
          dellemc_ansible_vplex_utils as utils
-from vplexapi.rest import ApiException
-from vplexapi.api import ConsistencyGroupApi
-from vplexapi.api import VirtualVolumeApi
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 __metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -36,8 +30,8 @@ description:
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
 
-author: Venkatesh Mariyappan (venkatesh_mariyappan@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Venkatesh Mariyappan (@unknown) <vplex.ansible@dell.com>
 
 options:
   cluster_name:
@@ -83,8 +77,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        cg_name: "{{ cg_name }}"
+        cluster_name: "cluster-1"
+        cg_name: "ansible_cg"
         state: "present"
 
     - name: Add virtual volumes to consistency group
@@ -93,9 +87,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        cg_name: "{{ cg_name }}"
-        virtual_volumes: "{{ virtual_volumes }}"
+        cluster_name: "cluster-1"
+        cg_name: "ansible_cg"
+        virtual_volumes: ["ansible_vv_1", "ansible_vv_2"]
         virtual_volume_state: "present-in-cg"
         state: "present"
 
@@ -105,8 +99,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        cg_name: "{{ cg_name }}"
+        cluster_name: "cluster-1"
+        cg_name: "ansible_cg"
         state: "present"
 
     - name: Rename consistency group
@@ -115,9 +109,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        cg_name: "{{ cg_name }}"
-        new_cg_name: "{{ new_cg_name }}"
+        cluster_name: "cluster-1"
+        cg_name: "ansible_cg"
+        new_cg_name: "ansible_new_cg"
         state: "present"
 
     - name: Remove virtual volumes from consistency group
@@ -126,9 +120,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        cg_name: "{{ cg_name }}"
-        virtual_volumes: "{{ virtual_volumes }}"
+        cluster_name: "cluster-1"
+        cg_name: "ansible_cg"
+        virtual_volumes: ["ansible_vv_1", "ansible_vv_2"]
         virtual_volume_state: "absent-in-cg"
         state: "present"
 
@@ -138,8 +132,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        cg_name: "{{ cg_name }}"
+        cluster_name: "cluster-1"
+        cg_name: "ansible_cg"
         state: "absent"
 
 '''
@@ -210,8 +204,7 @@ consistency_group_details:
             type: list
 '''
 
-LOG = utils.get_logger('dellemc_vplex_consistency_group',
-                       log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_consistency_group')
 
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
@@ -231,6 +224,13 @@ class ConsistencyGroup():
             supports_check_mode=False,
             required_together=required_together
         )
+
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
@@ -251,6 +251,8 @@ class ConsistencyGroup():
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
         (err_code, msg) = utils.verify_cluster_name(self.client, self.cl_name)
         if err_code != 200:
@@ -261,8 +263,9 @@ class ConsistencyGroup():
 
         # Create an instance to ConsistencyGroupApi to communicate with
         # vplexapi
-
-        self.cgrp = ConsistencyGroupApi(api_client=self.client)
+        api_obj = utils.VplexapiModules()
+        self.cgrp = api_obj.ConsistencyGroupApi(api_client=self.client)
+        self.vvol = api_obj.VirtualVolumeApi(api_client=self.client)
         LOG.info('Got the vplexapi instance for provisioning')
 
     def get_cgrp(self, cluster_name, cg_name):
@@ -276,7 +279,7 @@ class ConsistencyGroup():
             LOG.debug("Consistency group Details:\n%s", obj_cgrp)
             cg_details = utils.serialize_content(obj_cgrp)
             return cg_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get consistency group {0} of {1} due to"
                        " error: {2}".format(cg_name, cluster_name,
                                             utils.error_msg(err)))
@@ -295,7 +298,7 @@ class ConsistencyGroup():
             LOG.debug("Consistency group details:\n%s", obj_cgrp)
             cg_details = utils.serialize_content(obj_cgrp)
             return cg_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not create consistency group {0} in {1} due to"
                        " error: {2}".format(cg_payload['name'],
                                             cluster_name,
@@ -315,7 +318,7 @@ class ConsistencyGroup():
                      cluster_name)
             LOG.debug("Consistency group details:\n%s", obj_cgrp)
             return True
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not delete consistency group {0} from {1} due"
                        " to error: {2}".format(cg_name, cluster_name,
                                                utils.error_msg(err)))
@@ -336,7 +339,7 @@ class ConsistencyGroup():
             LOG.debug("Consistency group details:\n%s", obj_cgrp)
             cg_details = utils.serialize_content(obj_cgrp)
             return cg_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not update the consistency group {0} in {1} due"
                        " to error: {2}".format(cg_name, cluster_name,
                                                utils.error_msg(err)))
@@ -351,8 +354,7 @@ class ConsistencyGroup():
             vir_vol_details = None
             visibility = None
             used_cg_name = None
-            obj_vir_vol = VirtualVolumeApi(api_client=self.client)
-            vir_vol_details = obj_vir_vol.get_virtual_volume(
+            vir_vol_details = self.vvol.get_virtual_volume(
                 cluster_name, vir_vol_name)
             if vir_vol_details:
                 LOG.debug("Virtual volume details:\n%s", str(vir_vol_details))
@@ -362,7 +364,7 @@ class ConsistencyGroup():
                 visibility = vir_vol_details.visibility
             return (visibility, used_cg_name)
 
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get virtual volume {0} in {1} due"
                        " to error: {2}".format(vir_vol_name, cluster_name,
                                                utils.error_msg(err)))
@@ -442,8 +444,9 @@ class ConsistencyGroup():
                     cluster_name, v_vol)
 
                 if used_cg_name not in (cg_name, None):
-                    msg = "Virtual volume '{0}' used by another Consistency "\
-                        "group '{1}'".format(v_vol, used_cg_name)
+                    msg = ("Virtual volume '{0}' is used by another "
+                           "Consistency group '{1}' in {2}"
+                           .format(v_vol, used_cg_name, cluster_name))
                     LOG.error(msg)
                     self.module.fail_json(msg=msg)
 
@@ -468,10 +471,6 @@ class ConsistencyGroup():
                     patch_payload = self.get_cgrp_patch_payload(
                         operation, path, value)
                     cg_patch_payload.append(patch_payload)
-            if len(cg_patch_payload) > 0:
-                cg_details = self.update_cgrp(
-                    cluster_name, cg_name, cg_patch_payload)
-                changed = True
 
         if (state == 'present' and new_cg_name and cg_details):
             self.check_task_validity(new_cg_name)
@@ -487,9 +486,11 @@ class ConsistencyGroup():
                 patch_payload = self.get_cgrp_patch_payload(
                     operation, path, value)
                 cg_patch_payload.append(patch_payload)
-                cg_details = self.update_cgrp(
-                    cluster_name, cg_name, cg_patch_payload)
-                changed = True
+
+        if len(cg_patch_payload) > 0:
+            cg_details = self.update_cgrp(
+                cluster_name, cg_name, cg_patch_payload)
+            changed = True
 
         result['changed'] = changed
         result['cg_details'] = cg_details

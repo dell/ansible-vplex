@@ -3,14 +3,9 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
-import urllib3
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
-         dellemc_ansible_vplex_utils as utils
-from vplexapi.api import StorageArrayApi
-from vplexapi.rest import ApiException
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        dellemc_ansible_vplex_utils as utils
 
 __metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -29,8 +24,8 @@ description:
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
 
-author: Venkatesh Mariyappan (venkatesh_mariyappan@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Venkatesh Mariyappan (@unknown) <vplex.ansible@dell.com>
 
 options:
   cluster_name:
@@ -60,8 +55,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        array_name: "{{ array_name }}"
+        cluster_name: "cluster-1"
+        array_name: "EMC-SYMMETRIX-197200581"
         rediscover: true
 
     - name: Get StorageArray
@@ -70,8 +65,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        array_name: "{{ array_name }}"
+        cluster_name: "cluster-1"
+        array_name: "EMC-SYMMETRIX-197200581"
 
 '''
 
@@ -125,9 +120,7 @@ array_details:
 
 '''
 
-LOG = utils.get_logger('dellemc_vplex_array',
-                       log_devel=logging.INFO)
-
+LOG = utils.get_logger('dellemc_vplex_array')
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
 
@@ -143,6 +136,13 @@ class VplexRediscoverArray():
             argument_spec=self.module_params,
             supports_check_mode=False
         )
+
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
@@ -162,6 +162,8 @@ class VplexRediscoverArray():
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
         (err_code, msg) = utils.verify_cluster_name(self.client, self.cl_name)
         if err_code != 200:
@@ -172,7 +174,8 @@ class VplexRediscoverArray():
 
         # Create an instance to StorageArrayApi to communicate with
         # vplexapi
-        self.rediscoverarray = StorageArrayApi(api_client=self.client)
+        api_obj = utils.VplexapiModules()
+        self.rediscoverarray = api_obj.StorageArrayApi(api_client=self.client)
         LOG.info('Got the vplexapi instance for provisioning')
 
     def get_array(self, cluster_name, array_name):
@@ -186,7 +189,7 @@ class VplexRediscoverArray():
                      cluster_name)
             LOG.debug("StorageArray details:\n%s", obj_array)
             return obj_array
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get StorageArray {0} of {1} due to"
                        " error: {2}".format(array_name, cluster_name,
                                             utils.error_msg(err)))
@@ -203,7 +206,7 @@ class VplexRediscoverArray():
             LOG.info("Rediscovered StorageArray in %s", cluster_name)
             LOG.debug("StorageArray details:\n%s", obj_array)
             return obj_array
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not Rediscover array {0} in {1} due to"
                        " error: {2}".format(array_name,
                                             cluster_name,

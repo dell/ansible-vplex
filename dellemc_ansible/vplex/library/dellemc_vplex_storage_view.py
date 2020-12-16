@@ -3,17 +3,9 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
-import json
-import urllib3
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
         dellemc_ansible_vplex_utils as utils
-from vplexapi.api import ExportsApi
-from vplexapi.rest import ApiException
-from vplexapi.api import VirtualVolumeApi
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 __metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -37,11 +29,10 @@ description:
   Remove initiator from the storage view,
   Add virtual volume to the storage view,
   Remove virtual volume from the storage view.
-
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
-author: Sherene Jean Prathiba (sherene_jean_pratibh@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Sherene Jean Prathiba (@sherenevinod-dell) <vplex.ansible@dell.com>
 
 options:
   cluster_name:
@@ -112,9 +103,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
-        ports: "{{ports}}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
+        ports: ["P0000000046F01150-B0-FC00"]
         state: "present"
 
     - name: Delete a storage view
@@ -123,8 +114,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
         state: "absent"
 
     - name: Get a storage view
@@ -133,8 +124,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
         state: "present"
 
     - name: Rename a storage_view
@@ -143,8 +134,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        storage_view_name: "{{ storage_view_name }}"
-        new_storage_view_name: "{{ new_storage_view_name }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
+        new_storage_view_name: "ansible_stor_view_new"
         state: "present"
 
     - name: Add ports to the storage view
@@ -153,9 +145,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
-        ports: "{{ ports_list }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
+        ports: ["P0000000046E01150-A0-FC00", "P0000000046E01150-A0-FC01"]
         port_state: "present-in-view"
         state: "present"
 
@@ -165,9 +157,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
-        ports: "{{ ports_list }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
+        ports: ["P0000000046E01150-A0-FC00", "P0000000046E01150-A0-FC01"]
         port_state: "absent-in-view"
         state: "present"
 
@@ -177,9 +169,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
-        initiators: "{{ initiators_list }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
+        initiators: ["ansible_init_1", "ansible_init_2"]
         initiator_state: "present-in-view"
         state: "present"
 
@@ -189,33 +181,33 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
-        initiators: "{{ initiators_list }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
+        initiators: ["ansible_init_1", "ansible_init_2"]
         initiator_state: "absent-in-view"
         state: "present"
 
-    - name: Add virtualvolumes to the storage view
+    - name: Add virtual volumes to the storage view
       dellemc_vplex_storage_view:
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
-        virtual_volumes: "{{ virtualvolume_list }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
+        virtual_volumes: ["ansible_virvol_1", "ansible_virvol_2"]
         virtual_volume_state: "present-in-view"
         state: "present"
 
-    - name: Remove virtualvolumes from storage view
+    - name: Remove virtual volumes from storage view
       dellemc_vplex_storage_view:
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_view_name: "{{ storage_view_name }}"
-        virtual_volumes: "{{ virtualvolume_list }}"
+        cluster_name: "cluster-1"
+        storage_view_name: "ansible_stor_view"
+        virtual_volumes: ["ansible_virvol_1", "ansible_virvol_2"]
         virtual_volume_state: "absent-in-view"
         state: "present"
 '''
@@ -252,7 +244,7 @@ Storage View Details:
             type: list
 '''
 
-LOG = utils.get_logger('dellemc_vplex_storage_view', log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_storage_view')
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
 
@@ -270,6 +262,13 @@ class VplexStorageview():  # pylint:disable=R0902
             argument_spec=self.module_params,
             supports_check_mode=False
         )
+
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
@@ -288,6 +287,8 @@ class VplexStorageview():  # pylint:disable=R0902
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
         (err_code, msg) = utils.verify_cluster_name(self.client, self.cl_name)
         if err_code != 200:
@@ -297,8 +298,12 @@ class VplexStorageview():  # pylint:disable=R0902
             self.module.fail_json(msg=msg)
 
         # Create an instance to communicate with storageview VPLEX api
-        self.storageview = ExportsApi(api_client=self.client)
-        self.virtualvolume = VirtualVolumeApi(api_client=self.client)
+        api_obj = utils.VplexapiModules()
+        self.cls = api_obj.ClustersApi(api_client=self.client)
+        self.storageview = api_obj.ExportsApi(api_client=self.client)
+        self.virtualvolume = api_obj.VirtualVolumeApi(api_client=self.client)
+        self.maps = api_obj.MapsApi(api_client=self.client)
+        self.distvv = api_obj.DistributedStorageApi(api_client=self.client)
 
         # Module parameters
         self.st_name = self.module.params['storage_view_name']
@@ -309,6 +314,7 @@ class VplexStorageview():  # pylint:disable=R0902
         self.ini_state = self.module.params['initiator_state']
         self.virvols = self.module.params['virtual_volumes']
         self.virvol_state = self.module.params['virtual_volume_state']
+        self.vir_vol = {}
 
         # result is a dictionary that contains changed status and
         # storage view details
@@ -322,8 +328,7 @@ class VplexStorageview():  # pylint:disable=R0902
             # Construct the payload for creating a storage view
             pts = self.ports
             (ports,
-             initiators,  # pylint:disable=W0612
-             virvols) = self.get_obj_uri(ports=pts)  # pylint:disable=W0612
+             initiators) = self.get_obj_uri(ports=pts)  # pylint:disable=W0612
             storageview_payload = dict(
                 name=self.st_name,
                 ports=ports
@@ -335,7 +340,7 @@ class VplexStorageview():  # pylint:disable=R0902
                      self.st_name, self.cl_name)
             LOG.debug("Storageview details:\n%s", storage_view_details)
             return storage_view_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not create storageview {0} in {1} due to error:"
                        " {3}".format(
                            self.st_name, self.cl_name, utils.error_msg(err)))
@@ -354,12 +359,13 @@ class VplexStorageview():  # pylint:disable=R0902
             LOG.info(msg)
             LOG.debug("Storageview details: %s", storageview_details)
             return storageview_details
-        except ApiException as err:
+        except utils.ApiException as err:
+
             err_msg = ("Could not get storageview {0} in {1} due to error:"
                        " {2}".format(
                            name, self.cl_name, utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
-            body = json.loads(err.body)
+            body = utils.loads(err.body)
             if self.resource_fail_msg in body['message']:
                 self.module.fail_json(msg=self.fail_msg.format(self.cl_name))
             return None
@@ -372,7 +378,7 @@ class VplexStorageview():  # pylint:disable=R0902
             self.storageview.delete_storage_view(self.cl_name, self.st_name)
             LOG.info("Successfully deleted storageview %s from %s",
                      self.st_name, self.cl_name)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not delete storageview {0} from {1} due to "
                        "error: {3}".format(
                            self.st_name, self.cl_name, utils.error_msg(err)))
@@ -411,7 +417,7 @@ class VplexStorageview():  # pylint:disable=R0902
 
         # Construct the payload for ports
         if self.ports and self.pt_state == 'present-in-view':
-            (ports, initiators, virvols) = self.get_obj_uri(ports=self.ports)
+            (ports, initiators) = self.get_obj_uri(ports=self.ports)
             for port in ports:
                 LOG.info("Adding port %s to storageview %s in %s",
                          port, self.st_name, self.cl_name)
@@ -423,7 +429,7 @@ class VplexStorageview():  # pylint:disable=R0902
                              port, self.st_name, self.cl_name)
 
         elif self.ports and self.pt_state == 'absent-in-view':
-            (ports, initiators, virvols) = self.get_obj_uri(ports=self.ports)
+            (ports, initiators) = self.get_obj_uri(ports=self.ports)
             for port in ports:
                 LOG.info("Removing port %s from storageview %s in %s",
                          port, self.st_name, self.cl_name)
@@ -436,7 +442,7 @@ class VplexStorageview():  # pylint:disable=R0902
 
         # Construct the payload for initiators
         if self.initiators and self.ini_state == 'present-in-view':
-            (ports, initiators, virvols) = self.get_obj_uri(
+            (ports, initiators) = self.get_obj_uri(
                 initiators=self.initiators)
             for initiator in initiators:
                 LOG.info("Adding initiator %s to storageview %s in %s",
@@ -449,7 +455,7 @@ class VplexStorageview():  # pylint:disable=R0902
                              initiator, self.st_name, self.cl_name)
 
         elif self.initiators and self.ini_state == 'absent-in-view':
-            (ports, initiators, virvols) = self.get_obj_uri(
+            (ports, initiators) = self.get_obj_uri(
                 initiators=self.initiators)
             for initiator in initiators:
                 LOG.info("Removing initiator %s from storageview %s in %s",
@@ -463,45 +469,62 @@ class VplexStorageview():  # pylint:disable=R0902
 
         # Construct the payload for virtual volumes
         virtual_volumes = []
+        volume = []
+        final_virtual_volumes = []
         for obj in storageview_details['virtual_volumes']:
             virtual_volumes.append(obj['uri'])
 
+        urid = "/vplex/v2/distributed_storage/distributed_virtual_volumes"
+        uri = "/vplex/v2/clusters/{}/virtual_volumes/{}"
+        for key, val in self.vir_vol.items():
+            if key == "distvv" and len(self.vir_vol[key]) != 0:
+                for data in val:
+                    volume.append(urid + "/{}".format(data))
+            else:
+                for data in val:
+                    volume.append(uri.format(key, data))
         # Get the list of virtual volumes from the storageview list
         if self.virvols and self.virvol_state == 'present-in-view':
-            (ports, initiators, virvols) = self.get_obj_uri(
-                virtual_vols=self.virvols)
-            for virtualvol in virvols:
-                LOG.info("Adding virtual volume %s to storageview %s in %s",
-                         virtualvol, self.st_name, self.cl_name)
-                if virtualvol not in virtual_volumes:
-                    # Check if the virtual volume is used by any storage view
-                    status = self.is_virtual_vol_in_use(virtualvol)
-                    if status:
-                        msg = "In {0} you are adding a Virtual Volume {1} "
-                        msg = msg + "which is already exported to another "
-                        msg = msg + "Storage View. This may expose data "
-                        msg = msg + "already in use to this Storage View {2}"
-                        msg = msg.format(self.cl_name, virtualvol,
-                                         self.st_name)
-                        LOG.warning(msg)
-                    patch_payload.append(self.payload(
-                        'add', '/virtual_volumes', virtualvol))
+            for vols in volume:
+                if len(virtual_volumes) == 0 or vols not in virtual_volumes:
+                    LOG.info("Adding virtual volume %s present in %s to"
+                             " storageview %s in %s", vols.split('/')[-1],
+                             vols.split('/')[-3], self.st_name, self.cl_name)
+                    final_virtual_volumes.append(vols)
                 else:
-                    LOG.info("The virtual volume %s is already present in %s"
-                             " in %s", virtualvol, self.st_name, self.cl_name)
+                    LOG.info("The virtual volume %s of %s is already present"
+                             " in %s in %s", vols.split('/')[-1],
+                             vols.split('/')[-3], self.st_name, self.cl_name)
+
+            for vols in final_virtual_volumes:
+                # Check if the virtual volume is used by any storage view
+                status = self.is_virtual_vol_in_use(vols)
+                if status:
+                    msg = "In {0} you are adding a Virtual Volume {1} "
+                    msg = msg + "which is already exported to another "
+                    msg = msg + "Storage View. This may expose data "
+                    msg = msg + "already in use to this Storage View {2}"
+                    msg = msg.format(self.cl_name, vols.split('/')[-1],
+                                     self.st_name)
+                    LOG.warning(msg)
+                patch_payload.append(self.payload(
+                    'add', '/virtual_volumes', vols))
 
         elif self.virvols and self.virvol_state == 'absent-in-view':
-            (ports, initiators, virvols) = self.get_obj_uri(
-                virtual_vols=self.virvols)
-            for virtualvol in virvols:
-                LOG.info("Removing virtualvolume %s from storageview %s in %s",
-                         virtualvol, self.st_name, self.cl_name)
-                if virtualvol in virtual_volumes:
-                    patch_payload.append(self.payload(
-                        'remove', '/virtual_volumes', virtualvol))
+            for vols in volume:
+                LOG.info("Removing virtual volume %s of %s from storageview"
+                         " %s in %s", vols.split('/')[-1],
+                         vols.split('/')[-3], self.st_name, self.cl_name)
+                if vols in virtual_volumes:
+                    final_virtual_volumes.append(vols)
                 else:
-                    LOG.info("The virtual volume %s is absent in %s in %s",
-                             virtualvol, self.st_name, self.cl_name)
+                    LOG.info("The virtual volume %s of %s is absent in %s in"
+                             " %s", vols.split('/')[-1], vols.split('/')[-3],
+                             self.st_name, self.cl_name)
+
+            for volume in final_virtual_volumes:
+                patch_payload.append(self.payload(
+                    'remove', '/virtual_volumes', volume))
 
         if not patch_payload:
             return storageview_details, changed
@@ -513,7 +536,7 @@ class VplexStorageview():  # pylint:disable=R0902
                      self.st_name, self.cl_name)
             LOG.debug("Storageview details: %s", storageview_details)
             return storageview_details, True
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not update the storageview {0} in {1}"
                        " due to error: {2}".format(
                            self.st_name, self.cl_name, utils.error_msg(err)))
@@ -531,7 +554,7 @@ class VplexStorageview():  # pylint:disable=R0902
                 obj = None
                 try:
                     obj = self.storageview.get_port(self.cl_name, port)
-                except ApiException as err:
+                except utils.ApiException as err:
                     msg = ("Could not get port {0} details in {1} due to"
                            " error {2}".format(
                                port, self.cl_name, utils.error_msg(err)))
@@ -543,7 +566,7 @@ class VplexStorageview():  # pylint:disable=R0902
                     LOG.error(msg)
                     self.module.fail_json(msg=msg)
 
-    def check_storageobj_validity(self,  # pylint:disable=R0912, R0915
+    def check_storageobj_validity(self,  # pylint:disable=R0912, R0915, R0914
                                   stor_details):
         """
         Checks if the storage objects provided are present in the VPLEX
@@ -562,7 +585,7 @@ class VplexStorageview():  # pylint:disable=R0902
                 try:
                     obj = self.storageview.get_initiator_port(
                         self.cl_name, ini)
-                except ApiException as err:
+                except utils.ApiException as err:
                     msg = ("Could not get initiator {0} details in {1} due to"
                            " error {2}".format(
                                ini, self.cl_name, utils.error_msg(err)))
@@ -584,29 +607,72 @@ class VplexStorageview():  # pylint:disable=R0902
                 initiators.append(ini)
 
         # Check if virtual volumes provided are already present in VPLEX
-        if self.virvols:
-            LOG.info("Validating the virtual volumes")
-            for virvol in self.virvols:
-                obj = None
-                try:
-                    obj = self.virtualvolume.get_virtual_volume(
-                        self.cl_name, virvol)
-                except ApiException as err:
-                    msg = ("Could not get virtual volume {0} details in {1}"
-                           " due to error {2}".format(
-                               virvol, self.cl_name, utils.error_msg(err)))
-                    LOG.error("%s\n%s\n", msg, err)
-                    self.module.fail_json(msg=msg)
-                if obj is None:
-                    msg = ("Could not get virtual volume {0} details in {1}"
-                           .format(virvol, self.cl_name))
+        if self.virvols:  # pylint:disable=R1702
+            # Get the list of clusters and virtual volumes in respective
+            # clusters
+            cl_list = []
+            distvv_list = []
+            vv_dict = {}
+
+            clus_details = self.cls.get_clusters()
+            cl_list = [clus.name for clus in clus_details]
+            if len(cl_list) > 1:
+                distvv_details = self.distvv.get_distributed_virtual_volumes()
+                distvv_list = [dist.name for dist in distvv_details]
+            for cls in cl_list:
+                vvols = self.virtualvolume.get_virtual_volumes(cls)
+                vv_dict[cls] = [vol.name for vol in vvols]
+
+            if len(distvv_list) != 0:
+                self.vir_vol['distvv'] = [vol for vol in self.virvols
+                                          if vol in distvv_list]
+            # Create a dictionary with cluster/distributed and virtual volumes
+            # key.value pairs
+            if self.cl_name in vv_dict.keys():
+                self.vir_vol[self.cl_name] = [vol for vol in self.virvols
+                                              if vol in vv_dict[self.cl_name]]
+            cln = self.cl_name
+            for key in vv_dict:
+                self.vir_vol[key] = []
+            for key in vv_dict:
+                for vol in self.virvols:
+                    if vol in vv_dict[cln] and \
+                            vol not in self.vir_vol[cln]:
+                        self.vir_vol[cln].append(vol)
+                    elif vol not in self.vir_vol[cln] and \
+                            vol in vv_dict[key]:
+                        self.vir_vol[key].append(vol)
+
+            for vol in self.virvols:
+                vol_flag = False
+                for key in self.vir_vol:
+                    if vol in self.vir_vol[key]:
+                        if key not in (self.cl_name, 'distvv'):
+                            vv_det = self.virtualvolume.get_virtual_volume(
+                                key, vol)
+                            if vv_det.visibility == 'local' and \
+                                    self.virvol_state == 'present-in-view':
+                                msg = ("Could not add the virtual volume {0}"
+                                       " present in {1} to storage view {2}"
+                                       " present in {3} since visibility"
+                                       " is local".format(
+                                           vol, key, self.st_name,
+                                           self.cl_name))
+                                LOG.error(msg)
+                                self.module.fail_json(msg=msg)
+                        vol_flag = True
+                if not vol_flag and self.virvol_state == 'present-in-view':
+                    msg = ("Could not find virtual volume {0} in VPLEX"
+                           .format(vol))
                     LOG.error(msg)
                     self.module.fail_json(msg=msg)
+                elif not vol_flag and self.virvol_state == 'absent-in-view':
+                    LOG.info("Virtual volume %s is already absent in storage"
+                             " view %s", vol, self.st_name)
 
         # Get the complete URI of the storage objects in storageview_details
         (ports,
-         initiators,  # pylint:disable=W0612
-         virvol) = self.get_obj_uri(ports=ports, initiators=initiators)
+         initiators) = self.get_obj_uri(ports=ports, initiators=initiators)
 
         # Add the existing ports in the storageview to the list
         if stor_details:
@@ -658,26 +724,17 @@ class VplexStorageview():  # pylint:disable=R0902
         """
         Checks if virtual volume is used by any other storage view
         """
-        virtualvol_list = []
         try:
-            storageview_list = self.storageview.get_storage_views(self.cl_name)
-        except ApiException as err:
-            msg = ("Could not get the list of storage views in {0} due to "
-                   "error {1}".format(self.cl_name, utils.error_msg(err)))
+            get_map = self.maps.get_map(virtualvol)
+        except utils.ApiException as err:
+            msg = ("Could not get the map view of {0} due to "
+                   "error {1}".format(virtualvol, utils.error_msg(err)))
             LOG.error("%s\n%s\n", msg, err)
             self.module.fail_json(msg=msg)
 
-        if storageview_list is None:
-            return False
-        storageview_list = utils.serialize_content(storageview_list)
-
-        # Collect the virtual volumes used by the storage views in the cluster
-        for obj in storageview_list:
-            for vol in obj['virtual_volumes']:
-                virtualvol_list.append(vol['uri'])
-
-        # Check if the given virtual volume is present in the list
-        if virtualvol in virtualvol_list:
+        vview_list = utils.serialize_content(get_map)
+        # Collect the storage view if it has virtual volume
+        if len(vview_list['parents']) > 0:
             return True
         return False
 
@@ -692,13 +749,12 @@ class VplexStorageview():  # pylint:disable=R0902
         )
         return patch_payload
 
-    def get_obj_uri(self, ports=None, initiators=None, virtual_vols=None):
+    def get_obj_uri(self, ports=None, initiators=None):
         """
         Forms the complete URI of the object given
         """
         ports_uri = []
         initiators_uri = []
-        virtualvolume_uri = []
 
         if ports:
             ports_uri = ["/vplex/v2/clusters/{}/exports/ports/{}".format(
@@ -707,11 +763,7 @@ class VplexStorageview():  # pylint:disable=R0902
             uri = "/vplex/v2/clusters/{}/exports/initiator_ports/{}"
             initiators_uri = [uri.format(
                 self.cl_name, initiator) for initiator in initiators]
-        if virtual_vols:
-            uri = "/vplex/v2/clusters/{}/virtual_volumes/{}"
-            virtualvolume_uri = [uri.format(
-                self.cl_name, vir_volume) for vir_volume in self.virvols]
-        return (ports_uri, initiators_uri, virtualvolume_uri)
+        return (ports_uri, initiators_uri)
 
     def check_flag(self):
         """
@@ -779,6 +831,12 @@ class VplexStorageview():  # pylint:disable=R0902
                     LOG.error("Storage view %s not present", self.st_name)
                     self.module.fail_json(msg=msg)
                 else:
+                    if self.new_st_name:
+                        msg = "Could not perform create and rename in a " \
+                            "single task. Please specify each operation " \
+                            "in individual task."
+                        LOG.error(msg)
+                        self.module.fail_json(msg=msg)
                     self.check_name(self.st_name)
                     # Create a storage view
                     storageview_details = self.create_storageview()
@@ -798,8 +856,8 @@ class VplexStorageview():  # pylint:disable=R0902
             if self.ports:
                 ports = self.ports
                 (ports,
-                 initiators,  # pylint:disable=W0612
-                 vvols) = self.get_obj_uri(ports=ports)  # pylint:disable=W0612
+                 initiators) = self.get_obj_uri(  # pylint:disable=W0612
+                     ports=ports)  # pylint:disable=W0612
                 if set(ports) != set(storageview_details['ports']):
                     msg = ("Could not create the storage view {0} in {1}. "
                            "The storageview is already present with different"

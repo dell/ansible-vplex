@@ -1,0 +1,70 @@
+---
+- name: Set the variables for the create device task
+  set_fact:
+    input: &conn_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+      cluster_name: "{{ cluster_name }}"
+    vname: "{{ ansible_date_time.epoch }}"
+
+- name: Gather storage arrays
+  dellemc_vplex_gatherfacts:
+    <<: *conn_vars
+    gather_subset:
+      - stor_array
+  register: arrays
+
+- name: Rediscover all existing arrays
+  dellemc_vplex_array:
+    <<: *conn_vars
+    array_name: "{{ item }}"
+    rediscover: true
+  loop: "{{ arrays.StorageArrays }}"
+
+- name: Get storage volume details
+  dellemc_vplex_storage_volume:
+    <<: *conn_vars
+    storage_volume_id: "{{ item }}"
+    state: present
+  loop: "{{ storage_volume_id }}"
+  register: storvol
+
+- name: Claim storage volume
+  dellemc_vplex_storage_volume:
+    <<: *conn_vars
+    storage_volume_id: "{{ item }}"
+    new_storage_volume_name: "sv_{{ vname }}_{{ cluster_name }}_{{ index }}"
+    claimed_state: claimed
+    state: present
+  loop: "{{ storage_volume_id }}"
+  loop_control:
+    index_var: index
+  register: storvol
+
+- name: Create extent from new storage volume
+  dellemc_vplex_extent:
+    <<: *conn_vars
+    storage_volume_id: "{{ item }}"
+    extent_name: "extent_ps_{{ cluster_name }}_{{ index }}"
+    state: "present"
+  loop: "{{ storage_volume_id }}"
+  loop_control:
+    index_var: index
+  register: extent_det
+
+- name: Get the extent names
+  set_fact:
+    extent: "{{ extent_det['results'] | map(attribute=
+      'extent_details.name') | list }}"
+
+- name: Create device from new extent
+  dellemc_vplex_device:
+    <<: *conn_vars
+    geometry: "raid-1"
+    device_name: "{{ extent[0] }}_dev_1"
+    extents: "{{ extent }}"
+    extent_state: "present-in-device"
+    state: "present"
+  register: device

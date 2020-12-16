@@ -1,25 +1,19 @@
 """ Virtual Volume module """
 
-# !/usr/bin/python  # pylint: disable=C0302
+# !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
-from datetime import datetime, timedelta
 from collections import OrderedDict
+from datetime import datetime, timedelta
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
     dellemc_ansible_vplex_utils as utils
-from vplexapi.api import VirtualVolumeApi, ExportsApi, \
-    DevicesApi, ExtentApi, MapsApi
-from vplexapi.rest import ApiException
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
-__metaclass__ = type   # pylint: disable=C0103
+__metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
                     'status': ['preview'],
-                    'supported_by': 'community'}
+                    'supported_by': 'community'
+                    }
 
 DOCUMENTATION = r'''
 ---
@@ -33,14 +27,13 @@ description:
   Update Virtual Volume,
   Delete Virtual Volume,
   Enable/Disable remote access,
-  Add/Remove local mirror,
   Expand Virtual Volume
 
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
 
-author: Amit Uniyal (amit_u@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Amit Uniyal (@euniami-dell) <vplex.ansible@dell.com>
 
 options:
   cluster_name:
@@ -72,16 +65,6 @@ options:
     default: true
     type: bool
 
-  mirroring_device_name:
-    description:
-    - Defines to add/remove mirroring device to existing volume
-    type: str
-
-  mirroring_flag:
-    description:
-    - Defines to add/remove mirroring device
-    type: bool
-
   additional_devices:
     description:
     - Defines to add/remove virtual volume to expand
@@ -107,8 +90,8 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_id: "{{ virtual_vol_id }}"
+    cluster_name: "cluster-1"
+    virtual_volume_id: "ansible_dev_vol"
     state: "present"
 
 - name: Get virtual Volume by volume name
@@ -117,8 +100,8 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_name: "{{ virtual_vol_name}}"
+    cluster_name: "cluster-1"
+    virtual_volume_name: "ansible_dev_vol"
     state: "present"
 
 - name: Create Virtual volume
@@ -127,8 +110,9 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    supporting_device_name: "{{ device_name }}"
+    cluster_name: "cluster-1"
+    virtual_volume_name: "ansible_dev_vol"
+    supporting_device_name: "ansible_dev"
     thin_enable: true
     state: "present"
 
@@ -138,9 +122,9 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_id: "{{ virtual_volume_id }}"
-    new_virtual_volume_name: "{{ new_virtual_volume_name }}"
+    cluster_name: "cluster-1"
+    virtual_volume_id: "ansible_dev_vol"
+    new_virtual_volume_name: "ansible_dev_vol_new_name"
     state: "present"
 
 - name: Delete Virtual Volume
@@ -149,8 +133,8 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_name: "{{ virtual_volume_name }}"
+    cluster_name: "cluster-1"
+    virtual_volume_name: "ansible_dev_vol"
     state: "absent"
 
 - name: Enable remote access of Virtual Volume
@@ -159,8 +143,8 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_name: "{{ virtual_volume_name }}"
+    cluster_name: "cluster-1"
+    virtual_volume_name: "ansible_dev_vol"
     remote_access: "enable"
     state: "present"
 
@@ -170,8 +154,8 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_name: "{{ virtual_volume_name }}"
+    cluster_name: "cluster-1"
+    virtual_volume_name: "ansible_dev_vol"
     remote_access: "disable"
     state: "present"
 
@@ -181,45 +165,17 @@ EXAMPLES = r'''
     vplexuser: "{{ vplexuser }}"
     vplexpassword: "{{ vplexpassword }}"
     verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_name: "{{ virtual_volume_name }}"
-    additional_devices: "{{ additional_devices }}"
-    state: "present"
-
-- name: Add local mirror device to Virtual Volume
-  dellemc_vplex_virtual_volume:
-    vplexhost: "{{ vplexhost }}"
-    vplexuser: "{{ vplexuser }}"
-    vplexpassword: "{{ vplexpassword }}"
-    verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_name: "{{ virtual_volume_name }}"
-    mirroring_device_name: "{{ mirroring_device_name }}"
-    mirroring_flag: true
-    state: "present"
-
-- name: Remove local mirror device from Virtual Volume
-  dellemc_vplex_virtual_volume:
-    vplexhost: "{{ vplexhost }}"
-    vplexuser: "{{ vplexuser }}"
-    vplexpassword: "{{ vplexpassword }}"
-    verifycert: "{{ verifycert }}"
-    cluster_name: "{{ cluster_name }}"
-    virtual_volume_name: "{{ virtual_volume_name }}"
-    mirroring_device_name: "{{ mirroring_device_name }}"
-    mirroring_flag: false
+    cluster_name: "cluster-1"
+    virtual_volume_name: "ansible_dev_vol"
+    additional_devices: ["ansible_dev_1"]
     state: "present"
 
 '''
 
 RETURN = r'''
-output:
-changed: state changed status
-volume_details: virtual volume details
-
 changed:
-    description: Whether or not the virtual volume has changed
-    required: always
+    description: Status of the operation
+    returned: End of all the operations
     type: bool
 
 volume_details:
@@ -334,7 +290,8 @@ volume_details:
 '''
 
 
-LOG = utils.get_logger('dellemc_vplex_virtual_volume', log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_virtual_volume')
+
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
 
@@ -348,10 +305,21 @@ class VirtualVolumeModule:  # pylint: disable=R0902
         mutually_exclusive = [
             ['virtual_volume_name', 'virtual_volume_id']
         ]
+        required_one_of = [
+            ['virtual_volume_name', 'virtual_volume_id']
+        ]
         self.module = AnsibleModule(
             argument_spec=self.module_params,
             mutually_exclusive=mutually_exclusive,
+            required_one_of=required_one_of,
             supports_check_mode=False)
+
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
@@ -367,90 +335,94 @@ class VirtualVolumeModule:  # pylint: disable=R0902
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
-        self.virtual_client = VirtualVolumeApi(api_client=self.client)
-        self.export_client = ExportsApi(api_client=self.client)
-        self.device_client = DevicesApi(api_client=self.client)
-        self.extent_client = ExtentApi(api_client=self.client)
-        self.maps_client = MapsApi(api_client=self.client)
+        # Checking if the cluster is reachable
+        if self.module.params['cluster_name']:
+            cl_name = self.module.params['cluster_name']
+            (err_code, msg) = utils.verify_cluster_name(self.client, cl_name)
+            if err_code != 200:
+                if "Resource not found" in msg:
+                    msg = "Could not find resource {0}".format(cl_name)
+                LOG.error(msg)
+                self.module.fail_json(msg=msg)
+
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
+        # Create an instance to communicate with storageview VPLEX api
+        api_obj = utils.VplexapiModules()
+        self.virt_cl = api_obj.VirtualVolumeApi(api_client=self.client)
+        self.dev_cl = api_obj.DevicesApi(api_client=self.client)
+        self.maps_cl = api_obj.MapsApi(api_client=self.client)
+        self.dist_virt_cl = api_obj.DistributedStorageApi(
+            api_client=self.client)
+        self.cluster_cl = api_obj.ClustersApi(api_client=self.client)
         self.cluster_name = self.module.params['cluster_name']
         self.vol_obj = None
+        LOG.info("Got VPLEX instance to access common lib methods "
+                 "on VPLEX")
 
-        # Verify if required cluster is reachable
-        (err_code, msg) = utils.verify_cluster_name(
-            self.client, self.cluster_name)
-        if err_code != 200:
-            if "Resource not found" in msg:
-                msg = "Could not find resource %s" % self.cluster_name
-            LOG.error(msg)
-            self.module.fail_json(msg=msg)
-
-    def get_volume(self, vol_name=None):
-        """Get virtual volume object by volume name or id"""
-        # As volume id is as same as volume name,
-        # we can use any one to get volume object
-        if vol_name is None:
-            vol_name = self.vol_obj.name
-        LOG.info('Trying to get virtual volume by name')
-        LOG.info('Get virtual volume %s from %s',
-                 vol_name, self.cluster_name)
+    def get_all_volumes(self, cluster_name):
+        """Get all virtual volume from VPLEX"""
+        LOG.info('Get all virtual volumes from %s', cluster_name)
         try:
-            res = self.virtual_client.get_virtual_volume(
-                cluster_name=self.cluster_name,
-                name=vol_name)
-            LOG.info('Found Volume details for %s', res.name)
-            LOG.debug('Virtual volume details: %s', res)
-            return res
-        except ApiException as err:
-            err_msg = ("Could not get the virtual volume {0} in {1} due to"
-                       " error: {2}".format(
-                           vol_name, self.cluster_name,
-                           utils.error_msg(err)))
-            LOG.error("%s\n%s\n", err_msg, err)
-            return str(err_msg)
+            all_vols = self.virt_cl.get_virtual_volumes(
+                cluster_name=cluster_name)
+            LOG.debug("Obtained Volume details: %s", all_vols)
+            return all_vols
+        except utils.ApiException as err:
+            err_msg = ("Could not get all virtual volumes from "
+                       "{0} due to error: {1}".format(
+                           cluster_name, utils.error_msg(err)))
+            LOG.error("%s\n%s", err_msg, err)
+            self.module.fail_json(msg=err_msg)
 
     def get_volume_by_id(self, vol_id):
         """Get virtual volume object by volume id"""
-        LOG.info('Trying to get virtual volume by ID')
-        LOG.info('Get virtual volume %s from %s',
-                 vol_id, self.cluster_name)
-        err_msg = ("Could not get the virtual volume {0} in {1}".format(
-            vol_id, self.cluster_name))
-        vols = self.get_volumes()
-        data = [e for e in vols if e.system_id == vol_id]
+        LOG.info('Get virtual volume by ID')
+        all_vols = self.get_all_volumes(self.cluster_name)
+        data = [e for e in all_vols if e.system_id == vol_id]
         if len(data) > 0:
-            LOG.info('Found Volume details for %s', data[0].name)
-            LOG.debug('Virtual volume details: %s', data)
-            return data[0]
-        return str(err_msg)
+            LOG.info("Got virtual volume details %s by volume ID "
+                     "from %s", data[0].name, self.cluster_name)
+            LOG.debug("Volume details: %s", data)
+            if data[0].locality == "local":
+                return data[0], None
+        err_msg = ("Could not get virtual volume {0} from "
+                   "{1}".format(vol_id, self.cluster_name))
+        return None, err_msg
 
-    def get_volumes(self):
-        """Get all virtual volumes"""
-        LOG.info('Get all virtual volumes')
+    def get_volume_by_name(self, vol_name):
+        """Get virtual volume object by volume name"""
+        LOG.info('Get virtual volume by name')
+        err_msg = ("Could not get virtual volume {0} from {1} due to"
+                   " error: ".format(vol_name, self.cluster_name))
         try:
-            res = self.virtual_client.get_virtual_volumes(
-                cluster_name=self.cluster_name)
-            LOG.debug('Virtual Volumes details: %s', res)
-            return res
-        except ApiException as err:
-            err_msg = ("Could not get the virtual volumes in {0} due to"
-                       " error: {1}".format(
-                           self.cluster_name,
-                           utils.error_msg(err)))
-            LOG.error("%s\n%s\n", err_msg, err)
-            self.module.fail_json(msg=err_msg)
+            res = self.virt_cl.get_virtual_volume(
+                cluster_name=self.cluster_name,
+                name=vol_name)
+            LOG.info("Got virtual volume details %s from %s", vol_name,
+                     self.cluster_name)
+            LOG.debug("Volume details: %s", res)
+            if res.locality == "local":
+                return res, None
+            err_msg += "{0} is not a local virtual volume".format(vol_name)
+            LOG.error("%s\n", err_msg)
+        except utils.ApiException as err:
+            err_msg += "{0}".format(utils.error_msg(err))
+            LOG.error("%s\n%s", err_msg, err)
+        return None, err_msg
 
     def create_volume(self, payload):
         """Create virtual volume"""
         LOG.info('Creating virtual volume')
         LOG.debug('Details \n%s:\n\n', payload)
         try:
-            res = self.virtual_client.create_virtual_volume(
+            res = self.virt_cl.create_virtual_volume(
                 cluster_name=self.cluster_name,
                 virtual_volume_payload=payload)
             LOG.info('Created volume %s', res.name)
             LOG.debug('New virtual volume details: %s', res)
             return res
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not create virtual volume in {0} due to"
                        " error: {1}".format(
                            self.cluster_name, utils.error_msg(err)))
@@ -462,14 +434,14 @@ class VirtualVolumeModule:  # pylint: disable=R0902
         LOG.info('Updating virtual volume %s', self.vol_obj.name)
         LOG.debug('Details \n%s:\n\n%s', self.vol_obj.name, volume_payload)
         try:
-            res = self.virtual_client.patch_virtual_volume(
+            res = self.virt_cl.patch_virtual_volume(
                 cluster_name=self.cluster_name,
                 name=self.vol_obj.name,
                 virtual_volume_patch_payload=volume_payload)
             LOG.info('Updated %s', self.vol_obj.name)
             LOG.debug('Updated virtual volume details: %s', res)
             return res
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not update virtual volume {0} in {1} due to"
                        " error: {2}".format(
                            self.vol_obj.name, self.cluster_name,
@@ -478,18 +450,18 @@ class VirtualVolumeModule:  # pylint: disable=R0902
             self.module.fail_json(msg=err_msg)
 
     def expand_volume(self, payload):
-        """Expanding virtual volume"""
+        """Expand virtual volume"""
         LOG.info('Expanding virtual volume %s', self.vol_obj.name)
         LOG.debug('Details: \n%s', payload)
         try:
-            res = self.virtual_client.expand_virtual_volume(
+            res = self.virt_cl.expand_virtual_volume(
                 cluster_name=self.cluster_name,
                 name=self.vol_obj.name,
                 virtual_volume_expand_payload=payload)
             LOG.info('Expanded %s', self.vol_obj.name)
             LOG.debug('Expanded virtual volume details: %s', res)
             return res
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not expand virtual volume {0} in {1} due to"
                        " error: {2}".format(
                            self.vol_obj.name, self.cluster_name,
@@ -503,13 +475,13 @@ class VirtualVolumeModule:  # pylint: disable=R0902
         if not vol_name:
             vol_name = self.vol_obj.name
         try:
-            self.virtual_client.delete_virtual_volume(
+            self.virt_cl.delete_virtual_volume(
                 cluster_name=self.cluster_name,
                 name=vol_name)
             msg = 'Deleted volume '+vol_name
             LOG.info(msg)
             return True
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not delete virtual volume {0} in {1} due to"
                        " error: {2}".format(
                            vol_name, self.cluster_name,
@@ -517,17 +489,32 @@ class VirtualVolumeModule:  # pylint: disable=R0902
             LOG.error("%s\n%s\n", err_msg, err)
             self.module.fail_json(msg=err_msg)
 
+    def get_all_devices(self, cluster_name):
+        """Get all devices from VPLEX"""
+        LOG.info('Get all devices from %s', cluster_name)
+        try:
+            all_devs = self.dev_cl.get_devices(
+                cluster_name=cluster_name)
+            LOG.debug("Obtained devices details: %s", all_devs)
+            return all_devs
+        except utils.ApiException as err:
+            err_msg = ("Could not get all devices from "
+                       "{0} due to error: {1}".format(
+                           cluster_name, utils.error_msg(err)))
+            LOG.error("%s\n%s", err_msg, err)
+            self.module.fail_json(msg=err_msg)
+
     def get_device(self, dev_name):
-        """Get Device"""
+        """Get device object by volume name"""
         LOG.info('Get device %s from VPLEX', dev_name)
         try:
-            res = self.device_client.get_device(
+            res = self.dev_cl.get_device(
                 cluster_name=self.cluster_name,
                 name=dev_name)
             LOG.info('Found %s', res.name)
             LOG.debug('Device details: %s', res)
             return res
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get device {0} in {1} due to"
                        " error: {2}".format(
                            dev_name, self.cluster_name,
@@ -540,14 +527,14 @@ class VirtualVolumeModule:  # pylint: disable=R0902
         LOG.info('Trying to update device %s', dev_name)
         LOG.debug('Payload details \n\n%s\n', payload)
         try:
-            res = self.device_client.patch_local_device(
+            res = self.dev_cl.patch_local_device(
                 cluster_name=self.cluster_name,
                 name=dev_name,
                 local_device_patch_payload=payload)
             LOG.info('Updated device %s', dev_name)
             LOG.debug("Device details\n%s", res)
             return res, True
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not update device {0} in virtual volume {1}"
                        " in {2} due to error: {3}".format(
                            dev_name, self.vol_obj.name, self.cluster_name,
@@ -556,15 +543,15 @@ class VirtualVolumeModule:  # pylint: disable=R0902
             return str(err_msg), False
 
     def get_map(self, uri):
-        """Get object map from VPLEX"""
+        """Get map object from VPLEX"""
         obj = uri.split('/')[-1]
         LOG.info('Get map for %s', obj)
         try:
-            res = self.maps_client.get_map(uri)
+            res = self.maps_cl.get_map(uri)
             LOG.info('Map Found')
             LOG.debug('Map details: %s', res)
             return res
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get map for {0} in {1} due to"
                        " error: {2}".format(
                            obj, self.cluster_name,
@@ -572,32 +559,81 @@ class VirtualVolumeModule:  # pylint: disable=R0902
             LOG.error("%s\n%s\n", err_msg, err)
             return str(err_msg)
 
-    def perform_module_operation(self):  # pylint: disable=R0914, R0912, R0915
+    def get_distributed_virtual_volume(self, vol_name):
+        """Get distributed virtual volume object by volume name"""
+        LOG.info('Get distributed virtual volume by name')
+        try:
+            res = self.dist_virt_cl.get_distributed_virtual_volume(vol_name)
+            LOG.info("Got distributed virtual volume details %s", vol_name)
+            LOG.debug("Volume details: %s", res)
+            return res, None
+        except utils.ApiException as err:
+            err_msg = ("Could not get distributed virtual volume {0} from"
+                       " {1} due to error: {2}".format(
+                           vol_name, self.cluster_name, utils.error_msg(err)))
+            LOG.error("%s\n%s", err_msg, err)
+            return None, err_msg
+
+    def get_clusters(self):
+        """Get all clusters object from VPLEX"""
+        LOG.info('Get all clusters')
+        try:
+            res = self.cluster_cl.get_clusters()
+            LOG.debug('Clusters details: %s', res)
+            return [each.name for each in res]
+        except utils.ApiException as err:
+            err_msg = ("Could not get all clusters due to "
+                       "error: {0}".format(utils.error_msg(err)))
+            LOG.error("%s\n%s\n", err_msg, err)
+            return str(err_msg)
+
+    def volume_exists_in_other_clusters(self, vol_name):
+        """Verify if same volume name exists in other clusters"""
+        clusters = self.get_clusters()
+        clusters = list(set(clusters).difference([self.cluster_name]))
+        for cluster in clusters:
+            all_vols = self.get_all_volumes(cluster)
+            for vol in all_vols:
+                if vol_name == vol.name:
+                    return True
+        return False
+
+    def device_exists_in_other_clusters(self, dev_name):
+        """Verify if same volume name exists in other clusters"""
+        clusters = self.get_clusters()
+        clusters = list(set(clusters).difference([self.cluster_name]))
+        LOG.info(dev_name)
+        for cluster in clusters:
+            all_devs = self.get_all_devices(cluster)
+            for dev in all_devs:
+                if dev_name in dev.name:
+                    return True
+        return False
+
+    def perform_module_operation(self):  # pylint: disable=R0912, R0914, R0915
         """perform module operations"""
-        def exit_module(details, change_flag):
+        def exit_module(volume, change_flag):
             """module exit function"""
-            details = utils.serialize_content(details)
-            # add mirror and expand info in details
+            volume = utils.serialize_content(volume)
             if vol_type:
                 if vol_type == 'mirrored':
-                    details['mirrors'] = list(children.values())
-                    details['additional_devs'] = []
+                    volume['mirrors'] = list(children.values())
+                    volume['additional_devs'] = []
                 elif vol_type == 'expanded':
-                    details['mirrors'] = []
-                    details['additional_devs'] = list(children.values())
-            elif details != {}:
-                details['mirrors'] = []
-                details['additional_devs'] = []
+                    volume['mirrors'] = []
+                    volume['additional_devs'] = list(children.values())
+            elif volume != {}:
+                volume['mirrors'] = []
+                volume['additional_devs'] = []
             result = {
                 "changed": change_flag,
-                "virtual_volume_details": details
+                "storage_details": volume
             }
-            LOG.debug('Result %s', result)
-            LOG.info('Exiting module')
+            LOG.debug("Result %s\n", result)
             self.module.exit_json(**result)
 
         def is_device_rebuilding(dev):
-            """Verify if device is rebuilding or not"""
+            """Verify if device is in rebuilding state"""
             LOG.info('Verify if device is rebuilding for %s', dev.name)
             LOG.info('Device current rebuilding status is %s',
                      dev.rebuild_status)
@@ -609,7 +645,7 @@ class VirtualVolumeModule:  # pylint: disable=R0902
                 self.module.fail_json(msg=msg)
 
         def dev_checks(device_name, chk_vol=None, chk_top_level=None,
-                       chk_rebuild=None, chk_size=None):
+                       chk_rebuild=None):
             """Validate device for different tasks"""
             dev = self.get_device(device_name)
             if isinstance(dev, str):
@@ -627,22 +663,32 @@ class VirtualVolumeModule:  # pylint: disable=R0902
                 self.module.fail_json(msg=msg)
             if chk_rebuild:
                 is_device_rebuilding(dev)
-            if chk_size:
-                _dev = self.get_device(vol_dev_name)
-                msg = 'Verify mirror device size, if its greater or ' \
-                    'less than supporting device size'
-                LOG.info(msg)
-                msg = 'Device sizes:'
-                msg += '\n\tSupporting device size ' + str(_dev.capacity)
-                msg += '\n\tMirror device size ' + str(dev.capacity)
-                LOG.info(msg)
-                if _dev.capacity > dev.capacity:
-                    msg = 'Size of mirror device {0} is lesser than '\
-                        'supporting device {1} in {2}'.format(
-                            dev.name, _dev.name, self.cluster_name)
-                    LOG.error(msg)
-                    self.module.fail_json(msg=msg)
             return dev
+
+        def verify_new_volume_name(name, field='new_virtual_volume_name'):
+            def exit_fail(msg):
+                LOG.error(msg)
+                self.module.fail_json(msg=msg)
+
+            # if name is valid
+            LOG.info('Valdating new virtual volume name')
+            status, msg = utils.validate_name(
+                name, 63, field)
+            if not status:
+                exit_fail(msg)
+
+            msg = "Virtual volume {0} with same name already exists" \
+                " in ".format(name)
+            # if name is already assigned to dist virtual volume
+            vol, _ = self.get_distributed_virtual_volume(name)
+            if vol and vol.locality == 'distributed':
+                msg += 'distributed virtual volume'
+                exit_fail(msg)
+            # if name is already assigned to virtual volume in same cluster
+            vol, _ = self.get_volume_by_name(name)
+            if vol:
+                msg += self.cluster_name
+                exit_fail(msg)
 
         def get_volume_type(children):
             """Get volume type, if its mirrored or expanded"""
@@ -653,7 +699,6 @@ class VirtualVolumeModule:  # pylint: disable=R0902
                                      None)
                                     for _ in range((end - start).days)).keys()
                 return dates
-
             # verify if volume is mirrored or expanded
             dates = get_dates()
             if len(children) == 0:
@@ -667,38 +712,45 @@ class VirtualVolumeModule:  # pylint: disable=R0902
                 return 'mirrored'
             return 'expanded'
 
+        def rename(new_vol_name):
+            payload = [{
+                "op": "replace",
+                "path": "/name",
+                "value": new_vol_name}]
+            self.vol_obj = self.update_volume(payload)
+
         state = self.module.params['state']
-        virt_vol_name = self.module.params['virtual_volume_name']
-        virt_vol_id = self.module.params['virtual_volume_id']
+        vol_name = self.module.params['virtual_volume_name']
+        vol_id = self.module.params['virtual_volume_id']
         new_vol_name = self.module.params['new_virtual_volume_name']
         support_dev_name = self.module.params['supporting_device_name']
-        mirror_dev_name = self.module.params['mirroring_device_name']
-        mirroring_flag = self.module.params['mirroring_flag']
-        additional_devs = self.module.params['additional_devices']
-        remote_access = self.module.params['remote_access']
         thin_enabled = self.module.params['thin_enable']
+        remote_access = self.module.params['remote_access']
+        additional_devs = self.module.params['additional_devices']
 
         changed = False
         vol_type = None
 
-        # Get volume details
-        # all update operations can be performed by self.vol_obj
-        if virt_vol_name:
-            self.vol_obj = self.get_volume(virt_vol_name)
-        elif virt_vol_id:
-            self.vol_obj = self.get_volume_by_id(virt_vol_id)
-        if isinstance(self.vol_obj, str):
-            self.vol_obj = None
+        if vol_name:
+            self.vol_obj, err_msg = self.get_volume_by_name(vol_name)
+        if not self.vol_obj and vol_id:
+            self.vol_obj, err_msg = self.get_volume_by_id(vol_id)
+        if err_msg:
+            LOG.error(err_msg)
 
-        # delete volume
+        # delete virutal volume
         if state == 'absent':
             if self.vol_obj:
                 LOG.info('Trying to delete virtual volume %s',
                          self.vol_obj.name)
+                msg = 'Could not delete the virtual volume {0} in {1}, ' \
+                    'since '.format(self.vol_obj.name, self.cluster_name)
+                if self.vol_obj.consistency_group:
+                    msg += 'virtual volume is a part of Consistency Group'
+                    LOG.error(msg)
+                    self.module.fail_json(msg=msg)
                 if self.vol_obj.service_status != 'unexported':
-                    msg = 'Could not delete the virtual volume {0} from {1},' \
-                        ' since virtual volume is exported to storage'\
-                        ' view'.format(self.vol_obj.name, self.cluster_name)
+                    msg += 'virtual volume is not uexported'
                     LOG.error(msg)
                     self.module.fail_json(msg=msg)
                 changed = self.delete_volume()
@@ -707,92 +759,72 @@ class VirtualVolumeModule:  # pylint: disable=R0902
                 LOG.info(msg)
             exit_module({}, changed)
 
-        # create volume
-        if not self.vol_obj and state == 'present' and support_dev_name and \
-                thin_enabled in [True, False]:
-            LOG.info('Trying to create virtual volume from %s',
-                     support_dev_name)
-            dev = dev_checks(support_dev_name)
-            if dev.virtual_volume is None:
-                if dev.top_level:
+        # create virutal volume
+        if state == 'present' and support_dev_name and not self.vol_obj:
+            if new_vol_name:
+                msg = "Could not perform create and rename in a single " \
+                    "task. Please specify each operation in individual task."
+                LOG.error(msg)
+                self.module.fail_json(msg=msg)
+            if vol_name:
+                LOG.info('Trying to create virtual volume from %s',
+                         support_dev_name)
+                verify_new_volume_name(vol_name, 'virtual_volume_name')
+                dev = dev_checks(support_dev_name, chk_rebuild=True,
+                                 chk_top_level=True)
+                if dev.virtual_volume is None:
                     uri = '/vplex/v2/clusters/{0}/devices/{1}'.format(
                         self.cluster_name, support_dev_name)
                     payload = {
                         "thin": thin_enabled,
                         "device": uri
                     }
-                    is_device_rebuilding(dev)
                     self.vol_obj = self.create_volume(payload)
                     changed = True
+                    if vol_name != self.vol_obj.name:
+                        rename(vol_name)
                 else:
-                    msg = 'Device {0} is already used in some other ' \
-                        'virtual volume in {1}'.format(
-                            support_dev_name, self.cluster_name)
-                    LOG.info(msg)
+                    vol_name = dev.virtual_volume.split('/')[-1]
+                    msg = 'Device {0} is already attached to volume {1} ' \
+                        'in {2}'.format(dev.name, vol_name,
+                                        self.cluster_name)
+                    LOG.error(msg)
                     self.module.fail_json(msg=msg)
             else:
-                vol_name = dev.virtual_volume.split('/')[-1]
-                msg = 'Device {0} is already attached to volume {1} ' \
-                    'in {2}'.format(dev.name, vol_name,
-                                    self.cluster_name)
-                LOG.info(msg)
-                self.vol_obj = self.get_volume(vol_name)
+                msg = 'Supporting device and volume name must be given to ' \
+                    'create virtual volume'
+                LOG.error(msg)
+                self.module.fail_json(msg=msg)
 
         # remaining all operations required state and vol_obj to be present,
-        # we can skip further operation validation
+        # exit if vol_obj is not avilable in this stage
         if not self.vol_obj:
-            volume = virt_vol_name if virt_vol_name else virt_vol_id
+            volume = vol_name if vol_name else vol_id
             msg = 'Could not get \'{0}\' volume details in {1}.'.format(
                 volume, self.cluster_name)
             logmsg = msg + '\nAll below operations required correct volume' \
                 ' details:\n\tRename virtual volume' \
                 '\n\tEnable/Disable remote access' \
-                '\n\tExpand virtual volume' \
-                '\n\tAdd mirror device'
+                '\n\tExpand virtual volume'
             LOG.error(logmsg)
             self.module.fail_json(msg=msg)
 
-        # As control with state as 'absent' won't go any futher
-        # and only state as present will be available,
-        # we may not need to check for state == 'persent' anymore
-        vol_dev_name = self.vol_obj.supporting_device.split('/')[-1]
-
-        # rename volume
+        # rename virtual volume
         if new_vol_name:
             LOG.info('Trying to rename volume from %s to %s',
                      self.vol_obj.name, new_vol_name)
-
-            def validate_name(name):
-                """Name validation"""
-                LOG.info('Valdating new name')
-                status, msg = utils.validate_name(
-                    name, 63, 'new_virtual_volume_name')
-                if not status:
-                    LOG.error(msg)
-                    self.module.fail_json(msg=msg)
-                LOG.info(msg)
-
             if new_vol_name == self.vol_obj.name:
                 msg = 'New name is same as old name, '\
                     'No need to rename volume.'
                 LOG.info(msg)
             else:
-                validate_name(new_vol_name)
-                vol = self.get_volume(new_vol_name)
-                if isinstance(vol, str):
-                    payload = [{
-                        "op": "replace",
-                        "path": "/name",
-                        "value": new_vol_name}]
-                    self.vol_obj = self.update_volume(payload)
-                    changed = True
-                    LOG.info('Volume name updated to %s',
-                             self.vol_obj.name)
-                else:
-                    msg = 'Virtual volume {0} with same name already exists' \
-                        ' in {1}'.format(new_vol_name, self.cluster_name)
-                    LOG.error(msg)
-                    self.module.fail_json(msg=msg)
+                verify_new_volume_name(new_vol_name)
+                rename(new_vol_name)
+                changed = True
+                LOG.info('Volume name updated to %s',
+                         self.vol_obj.name)
+
+        vol_dev_name = self.vol_obj.supporting_device.split('/')[-1]
 
         # enable/disable remote access
         if remote_access:
@@ -800,6 +832,7 @@ class VirtualVolumeModule:  # pylint: disable=R0902
             # enable/disable remote access can be updated
             # in rebuilding state as well
             payload = None
+
             if self.vol_obj.visibility == 'local' and \
                     remote_access == 'enable':
                 payload = [{
@@ -809,22 +842,32 @@ class VirtualVolumeModule:  # pylint: disable=R0902
                 }]
             elif self.vol_obj.visibility == 'global' and \
                     remote_access == 'disable':
-                if self.vol_obj.service_status != 'unexported':
-                    msg = 'Virtual volume {0} in {1} is not ' \
-                        '\'unexported\' to disable remote access'.format(
-                            self.vol_obj.name, self.cluster_name)
-                    LOG.error(msg)
-                    self.module.fail_json(msg=msg)
                 payload = [{
                     "op": "replace",
                     "path": "/visibility",
                     "value": "local"
                 }]
             if payload:
+                if self.volume_exists_in_other_clusters(self.vol_obj.name):
+                    msg = "Could not update remote access of virtual volume "\
+                        "{0} in {1}, since virtual volume with same name "\
+                        "exists in another clusters".format(
+                            self.vol_obj.name, self.cluster_name)
+                    LOG.error(msg)
+                    self.module.fail_json(msg=msg)
+
+                if self.device_exists_in_other_clusters(vol_dev_name):
+                    msg = "Could not update remote access of virtual volume "\
+                        "{0} in {1}, since device with same name exists "\
+                        "in another clusters".format(
+                            vol_dev_name, self.cluster_name)
+                    LOG.error(msg)
+                    self.module.fail_json(msg=msg)
+
                 dev, changed = self.update_device(vol_dev_name, payload)
                 if not changed:
                     self.module.fail_json(msg=dev)
-                self.vol_obj = self.get_volume()
+                self.vol_obj, _ = self.get_volume_by_name(self.vol_obj.name)
 
         # If a virtual_volume has a mirror device,
         # we should not allow additional devices to be added to it.
@@ -891,62 +934,6 @@ class VirtualVolumeModule:  # pylint: disable=R0902
                 LOG.error(err_msg)
                 self.module.fail_json(msg=err_msg)
 
-        # mirroring volume
-        elif mirror_dev_name:
-            payload = None
-            uri = '/vplex/v2/clusters/{0}/devices/{1}'.format(
-                self.cluster_name, mirror_dev_name)
-
-            if mirroring_flag:
-                LOG.info('Trying to add mirror %s to virtual volume  '
-                         '%s', mirror_dev_name, self.vol_obj.name)
-                if vol_type == 'expanded':
-                    msg = 'Could not add mirror to virtual volume {0} ' \
-                        'in {1}, volume is expanded already, ' \
-                        'can not be mirrored.'.format(
-                            self.vol_obj.name, self.cluster_name)
-                    LOG.error(msg)
-                    self.module.fail_json(msg=msg)
-                if mirror_dev_name in children:
-                    LOG.info('%s is already attached to volume',
-                             mirror_dev_name)
-                    exit_module(self.vol_obj, changed)
-
-                dev_checks(mirror_dev_name, chk_vol=True, chk_top_level=True,
-                           chk_rebuild=True, chk_size=True)
-
-                payload = [{
-                    "op": "add",
-                    "path": "/legs",
-                    "value": uri
-                }]
-            elif mirroring_flag is False:
-                LOG.info('Trying to remove mirror %s from virtual volume  '
-                         '%s', mirror_dev_name, self.vol_obj.name)
-                if mirror_dev_name not in children:
-                    LOG.info('%s is not attached to volume',
-                             mirror_dev_name)
-                    exit_module(self.vol_obj, changed)
-                dev_checks(mirror_dev_name, chk_rebuild=True)
-                payload = [{
-                    "op": "remove",
-                    "path": "/legs",
-                    "value": uri
-                }]
-            if payload:
-                dev, changed = self.update_device(vol_dev_name, payload)
-                if not changed:
-                    self.module.fail_json(msg=dev)
-                # get upgraded virtual volume object
-                self.vol_obj = self.get_volume()
-            if mirroring_flag is False:
-                # Defect: VPLEX-29038
-                # removed mirror device formed a new virtual volume
-                # remove virtual volume created itself
-                dev = self.get_device(mirror_dev_name)
-                if dev.virtual_volume:
-                    vol = dev.virtual_volume.split('/')[-1]
-                    self.delete_volume(vol)
         exit_module(self.vol_obj, changed)
 
 
@@ -957,29 +944,23 @@ def get_user_parameters():
         state=dict(type='str', required=True,
                    choices=['present', 'absent']),
         cluster_name=dict(type='str', required=True),
-
         virtual_volume_name=dict(type='str', required=False),
         virtual_volume_id=dict(type='str', required=False),
-
         new_virtual_volume_name=dict(type='str', required=False),
-
         supporting_device_name=dict(type='str', required=False),
-        thin_enable=dict(type='bool', required=False, default=True),
-
-        mirroring_device_name=dict(type='str', required=False),
-        mirroring_flag=dict(type='bool', required=False),
-
+        thin_enable=dict(type='bool', required=False, default=True,
+                         choices=[True, False]),
+        remote_access=dict(type='str', required=False,
+                           choices=['enable', 'disable']),
         additional_devices=dict(type='list', required=False, default=[]),
-
-        remote_access=dict(type='str', required=False, choices=[
-            'enable', 'disable']))
+    )
 
 
 def main():
-    """Create VPLEX VirtualVolumeModule object and perform action on it
+    """Create VPLEX StorageVolumeModule object and perform action on it
         based on user input from playbook"""
-    virt_vm = VirtualVolumeModule()
-    virt_vm.perform_module_operation()
+    svm = VirtualVolumeModule()
+    svm.perform_module_operation()
 
 
 if __name__ == '__main__':

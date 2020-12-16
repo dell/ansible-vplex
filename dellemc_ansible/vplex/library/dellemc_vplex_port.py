@@ -3,15 +3,9 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
-import urllib3
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
         dellemc_ansible_vplex_utils as utils
-from vplexapi.api import ExportsApi
-from vplexapi.rest import ApiException
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 __metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -30,8 +24,8 @@ description:
   Disable existing port
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
-author: Sherene Jean Prathiba (sherene_jean_pratibh@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Sherene Jean Prathiba (@sherenevinod-dell) <vplex.ansible@dell.com>
 
 options:
   cluster_name:
@@ -66,8 +60,8 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        port_name: "{{ port_name }}"
+        cluster_name: "cluster-1"
+        port_name: "P0000000046E0124B-A0-FC02"
         state: "present"
 
     - name: Enable Port
@@ -75,8 +69,8 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        port_name: "{{ port_name }}"
+        cluster_name: "cluster-1"
+        port_name: "P0000000046E0124B-A0-FC02"
         enabled: true
         state: "present"
 
@@ -85,8 +79,8 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        port_name: "{{ port_name }}"
+        cluster_name: "cluster-1"
+        port_name: "P0000000046E0124B-A0-FC02"
         enabled: false
         state: "present"
 
@@ -135,7 +129,7 @@ Port Details:
             type: str
 '''
 
-LOG = utils.get_logger('dellemc_vplex_port', log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_port')
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
 
@@ -152,6 +146,12 @@ class VplexPort():  # pylint:disable=R0902
             argument_spec=self.module_params,
             supports_check_mode=False,
         )
+
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
 
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
@@ -175,6 +175,8 @@ class VplexPort():  # pylint:disable=R0902
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
         (status, msg) = utils.verify_cluster_name(self.client, self.cl_name)
         if status != 200:
@@ -185,7 +187,8 @@ class VplexPort():  # pylint:disable=R0902
 
         # Create an instance to PortApi to communicate with
         # vplexapi
-        self.port = ExportsApi(api_client=self.client)
+        api_obj = utils.VplexapiModules()
+        self.port = api_obj.ExportsApi(api_client=self.client)
 
         # result is a dictionary that contains changed status and
         # port details
@@ -201,7 +204,7 @@ class VplexPort():  # pylint:disable=R0902
                      self.port_nm, self.cl_name)
             LOG.debug("Port Details:\n%s", port_details)
             return port_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get the Port {0} Details in {1} due to"
                        " error: {2}".format(
                            self.port_nm, self.cl_name, utils.error_msg(err)))
@@ -223,7 +226,7 @@ class VplexPort():  # pylint:disable=R0902
                      self.port_nm, en_dis[str(self.enabled)], self.cl_name)
             LOG.debug("Port Details:\n%s", port_details)
             return port_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not set the Port {0} to {1} state in {2} due to"
                        " error: {3}".format(
                            self.port_nm, en_dis[str(self.enabled)],

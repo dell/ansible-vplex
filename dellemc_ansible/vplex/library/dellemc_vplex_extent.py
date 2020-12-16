@@ -3,17 +3,9 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import json
-import logging
-import urllib3
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
-        dellemc_ansible_vplex_utils as utils
-from vplexapi.api import ExtentApi
-from vplexapi.api import StorageVolumeApi
-from vplexapi.rest import ApiException
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
+    dellemc_ansible_vplex_utils as utils
 
 __metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -33,8 +25,8 @@ description:
   Rename existing extent,
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
-author: Sherene Jean Prathiba (sherene_jean_pratibh@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Sherene Jean Prathiba (@sherenevinod-dell) <vplex.ansible@dell.com>
 
 options:
   cluster_name:
@@ -73,11 +65,11 @@ options:
     choices: ["absent", "present"]
     required: True
 
-Notes:
+notes:
 - storage_volume_name or storage_volume_id or extent_name is required
-- storage_volume_name or storage_volume_id is required to create extent
-- storage_volume_name, storage_volume_id and extent_name are
-  mutually exclusive
+- storage_volume_name or storage_volume_id and extent_name is
+  required to create extent
+- storage_volume_name and storage_volume_id are mutually exclusive
 '''
 
 EXAMPLES = r'''
@@ -86,8 +78,10 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        storage_volume_name: "{{ storage_volume_name }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "cluster-1"
+        extent_name: "ansible_extent_1"
+        storage_volume_name: "ansible_st_vol"
         state: "present"
 
     - name: Get Extent using extent name
@@ -95,8 +89,9 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        extent_name: "{{ extent_name }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "cluster-1"
+        extent_name: "ansible_extent"
         state: "present"
 
     - name: Delete Extent using extent name
@@ -104,8 +99,9 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        extent_name: "{{ extent_name }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "cluster-1"
+        extent_name: "ansible_extent"
         state: "absent"
 
     - name: Rename Extent using the extent name
@@ -113,9 +109,10 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        new_extent_name: "{{ new_extent_name }}"
-        extent_name: "{{ extent_name }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "cluster-1"
+        new_extent_name: "ansible_extent_new_name"
+        extent_name: "ansible_extent"
         state: "present"
 
     - name: Rename Extent using the storage volume name
@@ -123,9 +120,10 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        new_extent_name: "{{ new_extent_name }}"
-        storage_volume_name: "{{ storage_volume_name }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "cluster-1"
+        new_extent_name: "ansible_extent_new_name"
+        storage_volume_name: "ansible_st_vol"
         state: "present"
 
     - name: Rename Extent using the storage volume id
@@ -133,9 +131,10 @@ EXAMPLES = r'''
         vplexhost: "{{ vplexhost }}"
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "{{ cluster_name }}"
-        new_extent_name: "{{ new_extent_name }}"
-        storage_volume_id: "{{ storage_volume_id }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "cluster-1"
+        new_extent_name: "ansible_extent_new_name"
+        storage_volume_id: "VPD83T3:60000970000197200581533030353438"
         state: "present"
 '''
 
@@ -212,7 +211,7 @@ Extent Details:
 
 '''
 
-LOG = utils.get_logger('dellemc_vplex_extent', log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_extent')
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
 
@@ -225,15 +224,11 @@ class VplexExtent():  # pylint:disable=R0902
         self.module_params.update(get_vplex_extent_parameters())
         self.resource_fail_msg = "Failed to collect resources"
         self.fail_msg = "Could not collect resources in {0}"
-
         mutually_exclusive = [
-            ['storage_volume_name', 'storage_volume_id',
-             'extent_name']
+            ['storage_volume_name', 'storage_volume_id']
         ]
-
         required_one_of = [
-            ['storage_volume_name', 'storage_volume_id',
-             'extent_name']
+            ['storage_volume_name', 'storage_volume_id', 'extent_name']
         ]
         # initialize the ansible module
         self.module = AnsibleModule(
@@ -243,6 +238,12 @@ class VplexExtent():  # pylint:disable=R0902
             required_one_of=required_one_of
         )
 
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
@@ -251,7 +252,7 @@ class VplexExtent():  # pylint:disable=R0902
                                       "before using these modules.")
 
         self.cl_name = self.module.params['cluster_name']
-
+        self.state = self.module.params['state']
         # Create the configuration instance to communicate with
         # vplexapi
         self.client = utils.config_vplexapi(self.module.params)
@@ -262,6 +263,8 @@ class VplexExtent():  # pylint:disable=R0902
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
         (err_code, msg) = utils.verify_cluster_name(self.client, self.cl_name)
         if err_code != 200:
@@ -272,7 +275,9 @@ class VplexExtent():  # pylint:disable=R0902
 
         # Create an instance to ExtentApi to communicate with
         # vplexapi
-        self.extent = ExtentApi(api_client=self.client)
+        api_obj = utils.VplexapiModules()
+        self.extent = api_obj.ExtentApi(api_client=self.client)
+        self.stor_obj = api_obj.StorageVolumeApi(api_client=self.client)
 
         # result is a dictionary that contains changed status and
         # extent details
@@ -284,16 +289,16 @@ class VplexExtent():  # pylint:disable=R0902
         """
         try:
             extent_details = self.extent.get_extent(self.cl_name, extent_name)
-            LOG.info("Got extent details %s from %s", extent_name,
+            LOG.info("Got extent %s details from %s", extent_name,
                      self.cl_name)
             LOG.debug("Extent Details:\n%s", extent_details)
             return extent_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get extent {0} from {1} due to"
                        " error: {2}".format(
                            extent_name, self.cl_name, utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
-            body = json.loads(err.body)
+            body = utils.loads(err.body)
             if self.resource_fail_msg in body['message']:
                 self.module.fail_json(msg=self.fail_msg.format(self.cl_name))
 
@@ -311,7 +316,7 @@ class VplexExtent():  # pylint:disable=R0902
                      new_extent_name, self.cl_name)
             LOG.debug("Extent Details:\n%s", extent_details)
             return extent_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not rename extent {0} to name {1} in {2} due to"
                        " error: {3}".format(
                            extent_name, new_extent_name, self.cl_name,
@@ -327,21 +332,21 @@ class VplexExtent():  # pylint:disable=R0902
             self.extent.delete_extent(self.cl_name, extent_name)
             LOG.info("Deleted extent %s from %s", extent_name, self.cl_name)
             return True
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not delete extent {0} from {1} due to"
                        " error: {2}".format(
                            extent_name, self.cl_name, utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
             self.module.fail_json(msg=err_msg)
 
-    def create_extent(self, stor_vol, storvol_details):
+    def create_extent(self, stor_vol, storvol_details, ext_name):
         """
         Create an extent on a storage volume
         """
         if not storvol_details:
             stor = stor_vol
             (used, ext, storvol) = \
-                self.is_storvol_inuse(stor)  # pylint:disable=W0612
+                self.is_storvol_inuse(stor, ext_name)  # pylint:disable=W0612
         else:
             used = storvol_details.use
 
@@ -364,34 +369,41 @@ class VplexExtent():  # pylint:disable=R0902
             LOG.info("Created extent %s on %s", ext_details.name, self.cl_name)
             LOG.debug("Extent Details:\n%s", ext_details)
             return ext_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not create extent on {0} in {1} due to"
                        " error: {2}".format(
                            stor_vol, self.cl_name, utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
             self.module.fail_json(msg=err_msg)
 
-    def is_storvol_inuse(self, stor_vol):
+    def is_storvol_inuse(self, stor_vol, ext_name):
         """
         Get the status of the storage volume
         """
-        # Create an instance to ExtentApi to communicate with
-        # vplexapi
-        stor_obj = StorageVolumeApi(api_client=self.client)
         try:
             extent_details = None
             use = None
             details = None
-            details = stor_obj.get_storage_volume(self.cl_name, stor_vol)
-            LOG.info("Got the details of storage volume %s of %s", stor_vol,
+            details = self.stor_obj.get_storage_volume(self.cl_name, stor_vol)
+            LOG.info("Got the details of storage volume %s in %s", stor_vol,
                      self.cl_name)
             if details:
                 if details.use == "used":
                     extent_name = details.used_by[0].split('/')[-1]
                     extent_details = self.get_extent(extent_name)
+                    if extent_details:
+                        LOG.info("The storage volume %s contains an extent"
+                                 " %s in %s", stor_vol, extent_name,
+                                 self.cl_name)
+                else:
+                    if ext_name is None and self.state != 'absent':
+                        msg = "Could not get extent details from {0} "\
+                            "because it has no extent on it".format(stor_vol)
+                        LOG.error(msg)
+                        self.module.fail_json(msg=msg)
                 use = details.use
             return (use, extent_details, details)
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get storage volume details {0} from {1} due"
                        " to error: {2}".format(
                            stor_vol, self.cl_name, utils.error_msg(err)))
@@ -402,25 +414,31 @@ class VplexExtent():  # pylint:disable=R0902
         """
         Get the name of the storage volume with the storage volume ID
         """
-        # Create an instance to ExtentApi to communicate with
-        # vplexapi
-        stor_obj = StorageVolumeApi(api_client=self.client)
         stor_vol_name = None
-
         try:
-            stor_vol_list = stor_obj.get_storage_volumes(self.cl_name)
+            stor_vol_list = self.stor_obj.get_storage_volumes(self.cl_name)
             for stor_vol in stor_vol_list:
                 if stor_vol.system_id == stor_id:
                     stor_vol_name = stor_vol.name
             LOG.info("Got storage volume name %s from storage volume ID %s",
                      stor_vol_name, stor_id)
             return stor_vol_name
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get storage volume ID {0} from {1} due to"
                        " error: {2}".format(
                            stor_id, self.cl_name, utils.error_msg(err)))
             LOG.error("%s\n%s\n", err_msg, err)
             self.module.fail_json(msg=err_msg)
+
+    def name_check(self, extent_name, field):
+        """Check the validity of extent name """
+        char_len = '63'
+        status, msg = utils.validate_name(extent_name, char_len, field)
+        if not status:
+            LOG.error(msg)
+            self.module.fail_json(msg=msg)
+        else:
+            LOG.info(msg)
 
     def perform_module_operation(self):    # pylint:disable=R0915, R0912, R0914
         """
@@ -437,65 +455,55 @@ class VplexExtent():  # pylint:disable=R0902
         new_extent_info = None
         changed = False
 
-        # Checking for wrong user inputs
-        if new_extent_name and state == 'absent':
-            msg = "When new extent name is given state can not be absent"
-            LOG.error(msg)
-            self.module.fail_json(msg=msg)
-
-        # Validating the new_extent_name
-        if new_extent_name:
-            char_len = '60'
-            status, msg = utils.validate_name(new_extent_name, char_len,
-                                              'new_extent_name')
-            if not status:
-                LOG.error(msg)
-                self.module.fail_json(msg=msg)
-            else:
-                LOG.info(msg)
-
+        # Check validity of given extent name
+        if extent_name is not None:
+            self.name_check(extent_name, 'extent_name')
         # Get the storage volume name from ID
         if storage_volume_id:
             storage_volume_name = self.get_storvol_name(storage_volume_id)
             if not storage_volume_name:
                 err_msg = ("Could not get storage volume name from ID {0} in"
-                           "  {1}".format(storage_volume_id, self.cl_name))
+                           " {1}".format(storage_volume_id, self.cl_name))
                 LOG.error(err_msg)
                 self.module.fail_json(msg=err_msg)
 
         # Get the extent details if the storage volume is in use
         if storage_volume_name:
             stor = storage_volume_name
+            ext_name = extent_name
             (used, extent_info, storvol) = \
-                self.is_storvol_inuse(stor)  # pylint:disable=W0612
+                self.is_storvol_inuse(stor, ext_name)  # pylint:disable=W0612
+            if extent_name:
+                ext_info = self.get_extent(extent_name)
+                if extent_info is not None and ext_info is not None:
+                    if ext_info.name == extent_info.name:
+                        extent_info = ext_info
+                        msg = "{0} is already created".format(extent_name)
+                        LOG.info(msg)
+                    else:
+                        msg = "Could not create {0} in {1} because an extent"\
+                            " already exists on given storage volume".format(
+                                extent_name, self.cl_name)
+                        LOG.error(msg)
+                        self.module.fail_json(msg=msg)
+                elif extent_info is None and ext_info is not None:
+                    msg = "Could not create {0} in {1} because given extent "\
+                        "name already exists".format(
+                            extent_name, self.cl_name)
+                    LOG.error(msg)
+                    self.module.fail_json(msg=msg)
+                elif ext_info is None and extent_info is not None:
+                    msg = "Could not create {0} in {1} because given "\
+                        "storage volume is in use".format(
+                            extent_name, self.cl_name)
+                    LOG.error(msg)
+                    self.module.fail_json(msg=msg)
 
         # Getting the details of the extent if extent_name is present
-        if extent_name:
+        if extent_name and not extent_info:
             extent_info = self.get_extent(extent_name)
 
-        # Getting the details of the extent if new_extent_name is present
-        if new_extent_name:
-            new_extent_info = self.get_extent(new_extent_name)
-
-        if extent_info and state == 'present':
-            if not new_extent_name:
-                extent_details = extent_info
-            elif new_extent_info:
-                if new_extent_info.name == extent_info.name:
-                    LOG.info("Extent name and New extent name are the same")
-                    extent_details = extent_info
-                else:
-                    err_msg = ("Could not rename extent {0} in {1}. Extent"
-                               " with name {2} is already present".format(
-                                   extent_name, self.cl_name, new_extent_name))
-                    LOG.error(err_msg)
-                    self.module.fail_json(msg=err_msg)
-            elif new_extent_name and not new_extent_info:
-                extent_details = self.rename_extent(extent_info.name,
-                                                    new_extent_name)
-                changed = True
-
-        elif extent_info and state == 'absent':
+        if extent_info and state == 'absent':
             if extent_info.use == "used":
                 name = extent_info.name
                 err_msg = ("Could not delete extent {0} from {1}. Extent is"
@@ -506,38 +514,67 @@ class VplexExtent():  # pylint:disable=R0902
             changed = True
             extent_details = None
 
+        elif not extent_info and state == 'absent':
+            if extent_name:
+                msg = ("Could not get extent details {0} from {1}."
+                       " Extent is not present.".format(
+                           extent_name, self.cl_name))
+                LOG.info(msg)
+            elif storage_volume_name:
+                msg = ("Extent is not present in storage volume {0}"
+                       " in {1}".format(storage_volume_name, self.cl_name))
+                LOG.info(msg)
+
         elif not extent_info and state == 'present':
             # If storage volume name is given create an extent
-            if storage_volume_name:
-                ext = self.create_extent(storage_volume_name, storvol)
-                extent_details = ext
+            if storage_volume_name and extent_name is not None:
+                if new_extent_name:
+                    msg = "Could not perform create and rename in a "\
+                        "single task. Please specify each operation in "\
+                        "individual task."
+                    LOG.error(msg)
+                    self.module.fail_json(msg=msg)
+                ext = self.create_extent(
+                    storage_volume_name, storvol, extent_name)
+                if ext.name == extent_name:
+                    LOG.info("Created extent {0} and extent name are same")
+                else:
+                    ext = self.rename_extent(ext.name, extent_name)
+                    extent_details = ext
+                    extent_info = ext
                 changed = True
-            else:
+            elif storage_volume_name and extent_name is None:
+                msg = "extent_name is required for creating an extent"
+                LOG.error(msg)
+                self.module.fail_json(msg=msg)
+            elif extent_name:
                 err_msg = ("Could not get extent details {0} from {1}."
-                           " Extent is not present".format(
+                           " Extent is not present.".format(
                                extent_name, self.cl_name))
                 LOG.error(err_msg)
                 self.module.fail_json(msg=err_msg)
-            # If storage volume name and new extent name are given
-            # Create an extent and rename it  with the new extent name
-            if new_extent_name:
-                if new_extent_name and not new_extent_info:
-                    extent_details = self.rename_extent(extent_details.name,
-                                                        new_extent_name)
-                    changed = True
-                elif new_extent_info:
+
+        if extent_info and state == 'present':
+            extent_details = extent_info
+            # Getting the details of the extent if new_extent_name is present
+            if (new_extent_name and (new_extent_name == extent_info.name)):
+                LOG.info("Extent name and New extent name are the same")
+            elif new_extent_name:
+                new_extent_info = self.get_extent(new_extent_name)
+                if new_extent_info:
                     err_msg = ("Could not rename extent {0} in {1}. Extent"
                                " with name {2} is already present".format(
-                                   extent_name, self.cl_name, new_extent_name))
+                                   extent_info.name, self.cl_name,
+                                   new_extent_name))
                     LOG.error(err_msg)
                     self.module.fail_json(msg=err_msg)
-                    extent_details = None
-                    changed = False
-                elif new_extent_info.name == extent_details.name:
-                    LOG.info("Extent name and New extent name are the same")
 
-        elif not extent_info and state == 'absent':
-            LOG.info("Could not get extent details")
+                if not new_extent_info:
+                    # Validating the new_extent_name
+                    self.name_check(new_extent_name, 'new_extent_name')
+                    extent_details = self.rename_extent(extent_info.name,
+                                                        new_extent_name)
+                    changed = True
 
         # Finally update the module changed state details
         self.result["changed"] = changed

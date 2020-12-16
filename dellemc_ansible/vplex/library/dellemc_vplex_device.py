@@ -3,15 +3,9 @@
 # !/usr/bin/python
 # Copyright: (c) 2020, DellEMC
 
-import logging
-import urllib3
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.storage.dell import \
          dellemc_ansible_vplex_utils as utils
-from vplexapi.api import DevicesApi
-from vplexapi.api import ExtentApi
-from vplexapi.rest import ApiException
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 __metaclass__ = type    # pylint: disable=C0103
 ANSIBLE_METADATA = {'metadata_version': '1.1',
@@ -36,8 +30,8 @@ description:
 extends_documentation_fragment:
   - dellemc_vplex.dellemc_vplex
 
-author: Venkatesh Mariyappan (venkatesh_mariyappan@dellteam.com)
-        vplex.ansible@dell.com
+author:
+- Venkatesh Mariyappan (@unknown) <vplex.ansible@dell.com>
 
 options:
   cluster_name:
@@ -95,10 +89,10 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        geometry: "{{ geometry }}"
-        device_name: "{{ device_name }}"
-        extents: "{{ extents }}"
+        cluster_name: "cluster-1"
+        geometry: "raid-1"
+        device_name: "ansible_device"
+        extents: ["extent_0", "extent_1"]
         extent_state: "present-in-device"
         state: "present"
 
@@ -108,11 +102,11 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        geometry: "{{ geometry }}"
-        stripe_depth: "{{ stripe_depth }}"
-        device_name: "{{ device_name }}"
-        extents: "{{ extents }}"
+        cluster_name: "cluster-1"
+        geometry: "raid-0"
+        stripe_depth: "1KB"
+        device_name: "ansible_device"
+        extents: ["extent_0", "extent_1"]
         extent_state: "present-in-device"
         state: "present"
 
@@ -122,8 +116,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        device_name: "{{ device_name }}"
+        cluster_name: "cluster-1"
+        device_name: "ansible_device"
         state: "present"
 
     - name: Delete device from cluster
@@ -132,8 +126,8 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        device_name: "{{ device_name }}"
+        cluster_name: "cluster-1"
+        device_name: "ansible_device"
         state: "absent"
 
     - name: Rename a local device
@@ -142,9 +136,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        device_name: "{{ device_name }}"
-        new_device_name: "{{ new_device_name }}"
+        cluster_name: "cluster-1"
+        device_name: "ansible_device"
+        new_device_name: "ansibe_new_device""
         state: "present"
 
     - name: Add extent to device
@@ -153,9 +147,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        device_name: "{{ device_name }}"
-        extents: "{{ extents }}"
+        cluster_name: "cluster-1"
+        device_name: "ansible_device"
+        extents: ["extent_0", "extent_1"]
         extent_state: "present-in-device"
         state: "present"
 
@@ -165,9 +159,9 @@ EXAMPLES = r'''
         vplexuser: "{{ vplexuser }}"
         vplexpassword: "{{ vplexpassword }}"
         verifycert: "{{ verifycert }}"
-        cluster_name: "{{ cluster_name }}"
-        device_name: "{{ device_name }}"
-        extents: "{{ extents }}"
+        cluster_name: "cluster-1"
+        device_name: "ansible_device"
+        extents: ["extent_0", "extent_1"]
         extent_state: "absent-in-device"
         state: "present"
 
@@ -182,7 +176,7 @@ changed:
 
 device_details:
     description: Properties of the device
-    returned: When device exist in VPLEX
+    returned: When device exists in VPLEX
     type: complex
     contains:
         application_consistent:
@@ -288,7 +282,7 @@ device_details:
             type: str
 '''
 
-LOG = utils.get_logger('dellemc_vplex_device', log_devel=logging.INFO)
+LOG = utils.get_logger('dellemc_vplex_device')
 
 HAS_VPLEXAPI_SDK = utils.has_vplexapi_sdk()
 
@@ -308,6 +302,13 @@ class VplexDevice():
             supports_check_mode=False,
             required_together=required_together
         )
+
+        # Check for external libraries
+        lib_status, message = utils.external_library_check()
+        if not lib_status:
+            LOG.error(message)
+            self.module.fail_json(msg=message)
+
         # Check for Python vplexapi sdk
         if HAS_VPLEXAPI_SDK is False:
             self.module.fail_json(msg="Ansible modules for VPLEX require "
@@ -328,6 +329,8 @@ class VplexDevice():
             LOG.error(msg)
             self.module.fail_json(msg=msg)
 
+        vplex_setup = utils.get_vplex_setup(self.client)
+        LOG.info(vplex_setup)
         # Checking if the cluster is reachable
         (err_code, msg) = utils.verify_cluster_name(self.client, self.cl_name)
         if err_code != 200:
@@ -338,8 +341,9 @@ class VplexDevice():
 
         # Create an instance to DeviceApi to communicate with
         # vplexapi
-
-        self.device = DevicesApi(api_client=self.client)
+        api_obj = utils.VplexapiModules()
+        self.ext = api_obj.ExtentApi(api_client=self.client)
+        self.device = api_obj.DevicesApi(api_client=self.client)
         LOG.info('Got the vplexapi instance for provisioning')
 
     def get_device(self, cluster_name, device_name):
@@ -353,7 +357,7 @@ class VplexDevice():
             LOG.debug("Device Details:\n%s", obj_device)
             device_details = utils.serialize_content(obj_device)
             return device_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get device {0} of {1} due to"
                        " error: {2}".format(device_name, cluster_name,
                                             utils.error_msg(err)))
@@ -372,7 +376,7 @@ class VplexDevice():
             LOG.debug("Device details:\n%s", obj_device)
             device_details = utils.serialize_content(obj_device)
             return device_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not create device {0} in {1} due to"
                        " error: {2}".format(device_payload['name'],
                                             cluster_name,
@@ -390,7 +394,7 @@ class VplexDevice():
             LOG.info("Deleted device %s from %s", device_name, cluster_name)
             LOG.debug("Device details:\n%s", obj_device)
             return True
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not delete device {0} from {1} due to"
                        " error: {2}".format(device_name,
                                             cluster_name,
@@ -412,7 +416,7 @@ class VplexDevice():
             LOG.debug("Device details:\n%s", obj_device)
             device_details = utils.serialize_content(obj_device)
             return device_details
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not update the device {0} in {1} due to"
                        " error: {2}".format(device_name, cluster_name,
                                             utils.error_msg(err)))
@@ -427,17 +431,14 @@ class VplexDevice():
         try:
             extent_details = None
             use = None
-            used_device_name = None
-            obj_extent = ExtentApi(api_client=self.client)
-            extent_details = obj_extent.get_extent(cluster_name, extent_name)
+            extent_details = self.ext.get_extent(cluster_name, extent_name)
             if extent_details:
                 LOG.debug("Extent details:\n%s", str(extent_details))
-                if extent_details.use == "used":
-                    used_device_name = extent_details.used_by[0].split('/')[-1]
             use = extent_details.use
-            return (use, used_device_name)
+            extent_details = utils.serialize_content(extent_details)
+            return (use, extent_details)
 
-        except ApiException as err:
+        except utils.ApiException as err:
             err_msg = ("Could not get extent details {0} of {1} due to"
                        " error: {2}".format(extent_name, cluster_name,
                                             utils.error_msg(err)))
@@ -511,12 +512,12 @@ class VplexDevice():
             self.module.fail_json(msg=msg)
         return mapping[stripe_depth]
 
-    def check_task_validity(self, device_name):
+    def check_task_validity(self, device_name, name):
         """
         Check if the device_name is valid string
         """
-        char_len = "60"
-        status, msg = utils.validate_name(device_name, char_len, 'device_name')
+        char_len = "63"
+        status, msg = utils.validate_name(device_name, char_len, name)
         if not status:
             LOG.error(msg)
             self.module.fail_json(msg=msg)
@@ -546,7 +547,7 @@ class VplexDevice():
         device_details = None
         device_patch_payload = []
 
-        self.check_task_validity(device_name)
+        self.check_task_validity(device_name, "device name")
         device_details = self.get_device(cluster_name, device_name)
 
         if (state == 'present' and not device_details):
@@ -586,12 +587,12 @@ class VplexDevice():
             device_details = None
             changed = True
 
-        elif (state == 'present' and new_device_name and device_details):
-            self.check_task_validity(new_device_name)
+        if (state == 'present' and new_device_name and device_details):
+            self.check_task_validity(new_device_name, "new device name")
             if new_device_name != device_details["name"]:
                 get_new_dev = self.get_device(cluster_name, new_device_name)
                 if get_new_dev:
-                    err_msg = ("New Device name {0} already exist"
+                    err_msg = ("New Device name {0} already exists"
                                " in {1}".format(new_device_name, cluster_name))
                     self.module.fail_json(msg=err_msg)
                 operation = 'replace'
@@ -600,25 +601,38 @@ class VplexDevice():
                 patch_payload = self.get_device_patch_payload(
                     operation, path, value)
                 device_patch_payload.append(patch_payload)
-                device_details = self.update_local_device(
-                    cluster_name, device_name, device_patch_payload)
-                changed = True
+            else:
+                LOG.info("The device name and the new device name are the"
+                         " same")
 
-        elif (state == 'present' and extents and extent_state and
-              device_details):
+        if (state == 'present' and extents and extent_state and
+                device_details):
             if device_details["geometry"] == "raid-1":
                 for extent in extents:
-                    (extent_use, used_device_name) = self.is_extent_inuse(
+                    (extent_use, extdetails) = self.is_extent_inuse(
                         cluster_name, extent)
                     if extent_use == 'used':
+                        used_device_name = extdetails["used_by"][0]
+                        used_device_name = used_device_name.split('/')[-1]
                         if used_device_name != device_name:
-                            msg = "Extent used by another device'{0}'".format(
-                                used_device_name)
+                            msg = ("Extent {0} is used by another device {1}"
+                                   " in {2}".format(extent, used_device_name,
+                                                    cluster_name))
                             LOG.error(msg)
                             self.module.fail_json(msg=msg)
 
                     if (extent_state == 'present-in-device' and
                             extent_use == 'claimed'):
+                        # Checking if the capacity of the extent is greater
+                        # than or equal to the device capacity
+                        if device_details["capacity"] > extdetails["capacity"]:
+                            msg = ("Could not attach extent {0} to device {1}"
+                                   " in {2}. The size of the device is "
+                                   "greater than the extent"
+                                   .format(extent, device_name, cluster_name))
+                            LOG.error(msg)
+                            self.module.fail_json(msg=msg)
+
                         operation = 'add'
                         path = '/legs'
                         value = "/vplex/v2/clusters/{}/extents/{}".format(
@@ -644,14 +658,15 @@ class VplexDevice():
                             operation, path, value)
                         device_patch_payload.append(patch_payload)
 
-                if len(device_patch_payload) > 0:
-                    device_details = self.update_local_device(
-                        cluster_name, device_name, device_patch_payload)
-                    changed = True
-
             else:
                 msg = "Add/Remove extent is supported only on raid-1 device"
-                LOG.info(msg)
+                LOG.error(msg)
+                self.module.fail_json(msg=msg)
+
+        if len(device_patch_payload) > 0:
+            device_details = self.update_local_device(
+                cluster_name, device_name, device_patch_payload)
+            changed = True
 
         result['changed'] = changed
         result['device_details'] = device_details

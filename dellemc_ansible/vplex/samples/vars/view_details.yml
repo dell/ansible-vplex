@@ -1,0 +1,6 @@
+---
+geometry: 'raid-1'
+port_wwn: ['list of port wwns']
+initiator_name: 'ansible_init'
+port_name: ['list of port names']
+storage_view_name: "storage view name"   # Need to specify the storage view name
