@@ -1,10 +1,17 @@
+
 """ Python script to collect the VPlex logs """
+from __future__ import (absolute_import, division, print_function)
 import os
 import subprocess
 import platform
 import datetime
 import sys
 import re
+import urllib3
+
+
+__metaclass__ = type
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Check if Vplexapi is installed
 try:
@@ -21,7 +28,6 @@ else:
     print("Vplexapi is not installed. Exiting...")
     sys.exit(1)
 
-
 # Constants
 ANSIBLE_LOG = "dellemc_ansible_vplex.log"
 PATH = "/var/log/VPlex/cli/"
@@ -32,16 +38,16 @@ def create_logdir():
     Function to create log directory
     """
     # Create Logs directory if it is not present
-    if not os.path.isdir("Logs"):
-        output = os.system("mkdir Logs")
+    if not os.path.isdir("logs"):
+        output = os.system("mkdir logs")
         if output != 0:
-            print("Could not create a directory Logs")
+            print("Could not create a directory logs")
             return None
-        print("Created the directory Logs")
+        print("Created the directory logs")
 
     # Create a Log folder with the current time stamp
     time = datetime.datetime.now()
-    log = "Logs/Log_" + time.strftime("%Y_%m_%d_%H_%M_%S")
+    log = "logs/log_" + time.strftime("%Y_%m_%d_%H_%M_%S")
     if not os.path.isdir(log):
         output = os.system("mkdir " + log)
         if output != 0:

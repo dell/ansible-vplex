@@ -12,6 +12,9 @@
     cluster_name: "cluster-1"
     extent_name: "ansible_ext_1"
 
+  collections:
+    - dellemc.vplex
+
   tasks:
     # This task gets the extent details
     - name: Block to get the extent details

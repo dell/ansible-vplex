@@ -1,22 +1,22 @@
 # Ansible Modules for Dell EMC VPLEX
-
 The Ansible Modules for Dell EMC VPLEX allow to provision the storage volume.
 
 The capabilities of Ansible modules are managing storage views, initiators, ports, consistency groups, virtual volumes, devices, extents, data migration jobs and storage volumes and to get information of recently configured resources through gather facts. The options available for each capability are list, show, create, delete and modify. These tasks can be executed by running simple playbooks written in yaml syntax.
 
 ## Support
-Ansible modules for VPLEX are supported by Dell EMC and are provided under the terms of the license attached to the source code.
-Dell EMC does not provide support for any source code modifications.
-For any Ansible module issues, questions or feedback, join the [Dell EMC Automation community](https://www.dell.com/community/Automation/bd-p/Automation).
+Ansible modules for VPLEX are supported by Dell EMC and are provided under the terms of the license attached to the source code. Dell EMC does not provide support for any source code modifications. For any Ansible module issues, questions or feedback, join the [Dell EMC Automation community](https://www.dell.com/community/Automation/bd-p/Automation).
 
 ## Supported Platforms
   * Dell VPLEX GeoSynchrony 6.2
+  * Metro Node 7.0
 
 ## Prerequisites
-  * Ansible 2.7, 2.8, 2.9
+  * Ansible 2.9, 2.10
   * Python 2.7.18, 3.6.9
+  * VPLEX Python SDK 6.2, 7.0
   * Red Hat Enterprise Linux 7.5, 7.6, 8.1
-  * VPLEX Python SDK 6.2
+  * Cent OS 7.6
+  * SLES (SUSE Linux Enterprise Server) SLES 15 SP1 (For Metro node - VPLEX Management server)
 
 ## Idempotency
 The modules are written in such a way that all requests are idempotent. It essentially means that the result of a successfully performed request is independent of the number of times it is executed.
@@ -36,48 +36,74 @@ The modules are written in such a way that all requests are idempotent. It essen
   * Rediscover Array module
   * Gather facts module
   * Data migration module
+  * Maps module
+
+## Auto Installation by installer utility
+  * ansible_vplex modules can be installed using auto installer utility or manually.
+  * Using installer, user will be able to choose the type of installation (copy modules to python library or install collections).
+  * installer.sh can be found in tools directory of ansible_vplex repo, and launched using below command.
+  * As per user inputs installer will setup virtual environment and install all required packages, including latest vplexapi library.
+ 
+        $ chmod +x installer.sh
+        $ ./installer.sh
+          OR
+        $ source installer.sh
+  
+  * Installer will verify if all modules are installed as expected and accessible in user environment.
+  * Once installation is completed, installer will provide information regarding installation path.
+  * Installer will suggest commands to activate the virtual environment and export environment variable in order to use modules.
+
+        Info: Installed collections can be found in /root/.py3.6_ans2.10/collections
+
+        Info: Run below command to activate virtualenv and run playbook...
+
+              source /root/.py3.6_ans2.10/bin/activate
+              export ANSIBLE_COLLECTIONS_PATHS=/root/.py3.6_ans2.10/collections
+              export PYTHONPATH=/root/Downloads/python-vplex/vplexapi-6.3.0.0
+
 
 ## Installation of SDK
-
   * git clone https://github.com/dell/python-vplex.git  
   
   * Export the python path with vplexapi
-      export PYTHONPATH="{$PYTHONPATH}:<complete path of vplexapi>”
+      export PYTHONPATH='{$PYTHONPATH}:<complete path of vplexapi>'
   * The above command works only on the current execution terminal. In order to make it persistent, we need to update the same export command in $HOME/.bashrc file followed by system reboot
 
-## Installation of Ansible Modules
+## Installing Collections
+  * Download the tar build and follow the below command to install the collection anywhere in your system:
+        ansible-galaxy collection install dellemc-vplex-1.2.0.tar.gz -p ./collections
 
-  * git clone https://github.com/dell/ansible-vplex.git
+  * Set the environment variable:
+        export ANSIBLE_COLLECTIONS_PATHS=$ANSIBLE_COLLECTIONS_PATHS:<install_path>/collections
 
-  * Make ansible-vplex as the current working directory
-    * cd ansible-vplex
+## Using Collections
+  * In order to use any Ansible module, ensure that the importing of proper FQCN(Fully Qualified Collection Name) must be embedded in the playbook. Below example can be referred.
+        collections:
+        - dellemc.vplex
 
-  * Determine the current ansible and python versions by executing the command
-      "ansible --version"
+  * For generating Ansible documentaion for a specific module, embed the FQCN before the module name. Below example can be referred.
+        ansible-doc dellemc.vplex.dellemc_vplex_gatherfacts
 
-  * Based on the listed python version along with location displayed in the above command, configure the ansible modules with the below steps
+## Running Ansible Modules
+The Ansible server must be configured with Python library for VPLEX to run the Ansible playbooks. The [Documents]( https://github.com/dell/ansible-vplex/tree/1.2.0/dellemc_ansible/docs ) provide information on different Ansible modules along with their functions and syntax. The parameters table in the Product Guide provides information on various parameters which needs to be configured before running the modules.
 
-    For e.g: 
-    * [root@<user>~]# mkdir -p /usr/lib/python2.7/site-packages/ansible/modules/storage/dellemc
-    * [root@<user>~]# mkdir -p /usr/lib/python2.7/site-packages/ansible/module_utils/storage/dell
-    * [root@<user>~]# touch /usr/lib/python2.7/site-packages/ansible/modules/storage/dellemc/__init__.py
-    * [root@<user>~]# touch /usr/lib/python2.7/site-packages/ansible/module_utils/storage/__init__.py
-    * [root@<user>~]# touch /usr/lib/python2.7/site-packages/ansible/module_utils/storage/dell/__init__.py
-    * [root@<user>~]# cp -rf dellemc_ansible/utils/dellemc_ansible_vplex_utils.py /usr/lib/python2.7/site-packages/ansible/module_utils/storage/dell/dellemc_ansible_vplex_utils.py
-    * [root@<user>~]# cp -rf dellemc_ansible/vplex/library/* /usr/lib/python2.7/site-packages/ansible/modules/storage/dellemc/
-    * For ansible 2.7 version,
-      [root@<user>~]# cp -rf dellemc_ansible/doc_fragments/dellemc_vplex.py /usr/lib/python2.7/site-packages/ansible/utils/module_docs_fragments/dellemc_vplex.py
-    * For ansible 2.8 or higher,
-      [root@<user>~]# cp -rf dellemc_ansible/doc_fragments/dellemc_vplex.py /usr/lib/python2.7/site-packages/ansible/plugins/doc_fragments/dellemc_vplex.py
+## SSL Certificate Validation
+  * Copy the CA certificate to this "/etc/pki/ca-trust/source/anchors" path of the host by any external means.
+  * Set the "REQUESTS_CA_BUNDLE" environment variable to the path of the SSL certificate using the command "export REQUESTS_CA_BUNDLE=/etc/pki/ca-trust/source/anchors/<<Certificate_Name>>"
+  * Import the SSL certificate to host using the command "update-ca-trust".
+
+## Results
+Each module returns the updated state and details of the entity.
+For example, if you are using the device module, all calls will return the updated details of the device.
+Sample result is shown in each module's documentation.
 
 ## VPlex log collection script
-
-Whenever a task fails the script vplexlog_collection.py collects the vplexapi logs, ansible module logs, the system logs and saves them in a folder Logs/Logs_<timestamp> in the current execution path.
+Whenever a task fails the script vplexlog_collection.py collects the vplexapi logs, ansible module logs, the system logs and saves them in a folder Logs/Logs_ in the current execution path.
 
 ## Prerequisites
-  * Copy tools/vplexlog_collection.py to the path of the playbook
-  * Add a block for rescue in the playbook like shown in tools/log_collection.yml
-  * Install sshpass
-  * Add the Vplex server IP to the file ~/.ssh/known_hosts in the test system
-  * Set the python path for vplexapi
-    export PYTHONPATH="{$PYTHONPATH}:/<vplexapi_PATH>"
+ * Copy tools/vplexlog_collection.py to the path of the playbook
+ * Add a block for rescue in the playbook like shown in tools/log_collection.yml
+ * Install sshpass
+ * Add the Vplex server IP to the file ~/.ssh/known_hosts in the test system
+ * Set the python path for vplexapi
+ * export PYTHONPATH="{$PYTHONPATH}:/<vplexapi_PATH>"

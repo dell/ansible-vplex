@@ -1,0 +1,4 @@
+certifi
+urllib3
+six
+vplexapi

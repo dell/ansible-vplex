@@ -1,0 +1,66 @@
+---
+- name: "Setup variables for remove device in tasks"
+  set_fact:
+    input: &conn_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+    extents: []
+    volumes: []
+    ext1: []
+    sv1: []
+
+  collections:
+    - dellemc.vplex
+
+- name: Get Map - devices
+  dellemc_vplex_maps:
+    <<: *conn_vars
+    cluster_name: "{{ cluster_name }}"
+    entity_type: 'devices'
+    entity_name: "{{ devices }}"
+  register: dev_map1
+
+- name: Get map details
+  set_fact:
+    ext_det1: "{{ dev_map1.map_details }}"
+
+- name: Get extent details
+  set_fact:
+    ext1: "{{ ext1 +  [item.split(':')[-1]] | map('trim') | list }}"
+  loop: "{{ ext_det1 }}"
+  when: item is search("extents")
+
+- name: Get storage volume details
+  set_fact:
+    sv1: "{{ sv1 +  [item.split(':')[-1]] | map('trim') | list }}"
+  loop: "{{ ext_det1 }}"
+  when: item is search("storage_volumes")
+
+- name: Delete the device
+  dellemc_vplex_device:
+    <<: *conn_vars
+    cluster_name: "{{ cluster_name }}"
+    device_name: "{{ devices }}"
+    state: "absent"
+  register: device_delete
+
+- name: Delete the extent
+  dellemc_vplex_extent:
+    <<: *conn_vars
+    cluster_name: "{{ cluster_name }}"
+    extent_name: "{{ item }}"
+    state: "absent"
+  loop: "{{ ext1 }}"
+  register: extent_delete
+
+- name: Unclaim the storage volume
+  dellemc_vplex_storage_volume:
+    <<: *conn_vars
+    cluster_name: "{{ cluster_name }}"
+    storage_volume_name: "{{ item }}"
+    claimed_state: "unclaimed"
+    state: "present"
+  loop: "{{ sv1 }}"
+  register: unclaim_vol
