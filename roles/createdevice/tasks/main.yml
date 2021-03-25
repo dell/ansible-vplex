@@ -1,0 +1,141 @@
+---
+- name: Set the variables for the create device task
+  set_fact:
+    input: &conn_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+      cluster_name: "{{ cluster_name }}"
+    n: "{{ no_stor_vol }}"
+    vname: "{{ ansible_date_time.epoch }}"
+    extent_list: []
+    extent_list1: []
+
+  collections:
+    - dellemc.vplex
+
+# This task returns the list of storage volumes that are unclaimed
+- name: List of all storage volumes that are unclaimed in a given cluster
+  dellemc_vplex_gatherfacts:
+    <<: *conn_vars
+    gather_subset:
+      - stor_vol
+    filters:
+      - filter_key: "use"
+        filter_operator: "equal"
+        filter_value: "unclaimed"
+      - filter_key: "capacity"
+        filter_operator: "lesser"
+        filter_value: "10GB"
+      - filter_key: "storage_array_name"
+        filter_operator: "equal"
+        filter_value: "{{ array_name }}"
+
+  register: volume
+
+- name: Claim first Storage Volumes
+  dellemc_vplex_storage_volume:
+    <<: *conn_vars
+    storage_volume_id: "{{ item }}"
+    new_storage_volume_name: "sv_{{ ansible_date_time.epoch }}_{{ index }}"
+    claimed_state: "claimed"
+    state: "present"
+  loop: "{{ volume.StorageVolumes[0:n] }}"
+  loop_control:
+    index_var: index
+  register: volume_claimed_2
+
+- name: Get the storage volumes names
+  set_fact:
+    stor_vol: "{{ volume_claimed_2['results'] | map(attribute=
+          'storage_details.name') | list }}"
+
+- name: Create extents
+  dellemc_vplex_extent:
+    <<: *conn_vars
+    storage_volume_name: "{{ item }}"
+    extent_name: "extent_ps_{{ cluster_name }}_{{ index }}"
+    state: "present"
+  loop: "{{ stor_vol }}"
+  loop_control:
+    index_var: index
+  register: extent_det
+
+- name: Get the extent names
+  set_fact:
+    extent: "{{ extent_det['results'] | map(attribute=
+          'extent_details.name') | list }}"
+
+- name: set_fact to split the even extents for device creation
+  set_fact:
+    extent_list: "{{ extent_list }} +
+                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+  loop: "{{ range(0, extent|length, 2) | list }}"
+  when: extent|length  % 2 == 0
+
+- name: set_fact to split the odd extents for device creation
+  set_fact:
+    extent_list1: "{{ extent_list1 }} +
+                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+  loop: "{{ range(0, extent|length - 1, 2) | list }}"
+  when: extent|length  % 2 != 0
+
+- name: set_fact to store last extent for odd extent
+  set_fact:
+    extent_list1: "{{ extent_list1 }} +[['{{ extent[item] }}']]"
+  loop: "{{ range(extent|length - 1,extent|length) | list }}"
+  when: extent|length  % 2 != 0
+
+- name: Create devices even
+  dellemc_vplex_device:
+    <<: *conn_vars
+    device_name: "{{ extent[0] }}_dev_{{ index }}"
+    extents: "{{ item }}"
+    extent_state: "present-in-device"
+    geometry: "raid-1"
+    state: "present"
+  with_items:
+    - "{{ extent_list }}"
+  loop_control:
+    index_var: index
+  when: extent|length  % 2 == 0
+  register: device_det
+
+- name: Get the even device names
+  set_fact:
+    device: "{{ device_det['results'] | map(attribute=
+          'device_details.name') | list }}"
+  when: extent|length  % 2 == 0
+
+- name: Create devices odd
+  dellemc_vplex_device:
+    <<: *conn_vars
+    device_name: "{{ extent[0] }}_dev_{{ index }}"
+    extents: "{{ item }}"
+    extent_state: "present-in-device"
+    geometry: "raid-1"
+    state: "present"
+  with_items:
+    - "{{ extent_list1 }}"
+  loop_control:
+    index_var: index
+  when: extent|length  % 2 != 0
+  register: device_det1
+
+- name: Get the device names
+  set_fact:
+    device: "{{ device_det1['results'] | map(attribute=
+          'device_details.name') | list }}"
+  when: extent|length  % 2 != 0
+
+- name: Get device details
+  dellemc_vplex_device:
+    <<: *conn_vars
+    device_name: "{{ item }}"
+    state: 'present'
+  register: get_device
+  loop: "{{ device }}"
+  until: get_device.device_details.rebuild_status != "rebuilding"
+  retries: 100
+  delay: 5

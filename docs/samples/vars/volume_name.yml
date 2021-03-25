@@ -1,0 +1,5 @@
+---
+cluster_name_1: "first cluster name"
+cluster_name_2: "second cluster name"
+array_name_1: "array name of cluster-1"
+array_name_2: "array name of cluster-2"

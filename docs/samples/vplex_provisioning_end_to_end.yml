@@ -1,0 +1,337 @@
+# VPlex Provisioning
+
+---
+- name: Perform VPlex provisioning
+  hosts: localhost
+  connection: local
+
+  vars_files:
+    - vars/connection.yml
+    - vars/credentials.yml
+    - vars/input.yml
+
+  vars:
+    input: &connection_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+    n: "{{ no_stor_vol }}"
+    extent_list: []
+    extent_list1: []
+
+  collections:
+    - dellemc.vplex
+
+  tasks:
+    - name: Rediscover StorageArray for local
+      dellemc_vplex_array:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        array_name: "{{ array_name_1 }}"
+        rediscover: true
+      register: array_details
+      when: cluster_name_1 == cluster_name_2
+
+    # This task returns the list of storage volumes that are unclaimed
+    - name: List of all storage volumes that are unclaimed in a given cluster
+      dellemc_vplex_gatherfacts:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: "use"
+            filter_operator: "equal"
+            filter_value: "unclaimed"
+          - filter_key: "capacity"
+            filter_operator: "lesser"
+            filter_value: "10GB"
+
+      register: volume
+      when: cluster_name_1 == cluster_name_2
+
+    - name: Claim Storage Volumes
+      dellemc_vplex_storage_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        storage_volume_id: "{{ item }}"
+        new_storage_volume_name: "sv_{{ ansible_date_time.epoch }}_{{ index }}"
+        claimed_state: "claimed"
+        state: "present"
+      loop: "{{ volume.StorageVolumes[0:n] }}"
+      loop_control:
+        index_var: index
+      register: volume_claimed_2
+      when: cluster_name_1 == cluster_name_2
+
+    - name: Get the storage volumes names
+      set_fact:
+        stor_vol: "{{ volume_claimed_2['results'] | map(attribute=
+          'storage_details.name') | list }}"
+      when: cluster_name_1 == cluster_name_2
+
+    - name: Create extents
+      dellemc_vplex_extent:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        storage_volume_name: "{{ item }}"
+        extent_name: "extent_ps_{{ cluster_name_1 }}_{{ index }}"
+        state: "present"
+      loop: "{{ stor_vol }}"
+      loop_control:
+        index_var: index
+      register: extent_det
+      when: cluster_name_1 == cluster_name_2
+
+    - name: Get the extent names
+      set_fact:
+        extent: "{{ extent_det['results'] | map(attribute=
+          'extent_details.name') | list }}"
+      when: cluster_name_1 == cluster_name_2
+
+    - name: set_fact to split the even extents for device creation
+      set_fact:
+        extent_list: "{{ extent_list }} +
+                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+      loop: "{{ range(0, extent|length, 2) | list }}"
+      when:
+        - cluster_name_1 == cluster_name_2
+        - extent|length  % 2 == 0
+
+    - name: set_fact to split the odd extents for device creation
+      set_fact:
+        extent_list1: "{{ extent_list1 }} +
+                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+      loop: "{{ range(0, extent|length - 1, 2) | list }}"
+      when:
+        - cluster_name_1 == cluster_name_2
+        - extent|length  % 2 != 0
+
+    - name: set_fact to store last extent for odd extent
+      set_fact:
+        extent_list1: "{{ extent_list1 }} +[['{{ extent[item] }}']]"
+      loop: "{{ range(extent|length - 1,extent|length) | list }}"
+      when:
+        - cluster_name_1 == cluster_name_2
+        - extent|length  % 2 != 0
+
+    - name: Create devices even
+      dellemc_vplex_device:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        device_name: "{{ extent[0] }}_dev_{{ index }}"
+        extents: "{{ item }}"
+        extent_state: "present-in-device"
+        geometry: "{{ geometry }}"
+        state: "present"
+      with_items:
+        - "{{ extent_list }}"
+      loop_control:
+        index_var: index
+      when:
+        - cluster_name_1 == cluster_name_2
+        - extent|length  % 2 == 0
+      register: device_det
+
+    - name: Get the even device names
+      set_fact:
+        device: "{{ device_det['results'] | map(attribute=
+          'device_details.name') | list }}"
+      when:
+        - cluster_name_1 == cluster_name_2
+        - extent|length  % 2 == 0
+
+    - name: Create devices odd
+      dellemc_vplex_device:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        device_name: "{{ extent[0] }}_dev_{{ index }}"
+        extents: "{{ item }}"
+        extent_state: "present-in-device"
+        geometry: "{{ geometry }}"
+        state: "present"
+      with_items:
+        - "{{ extent_list1 }}"
+      loop_control:
+        index_var: index
+      when:
+        - cluster_name_1 == cluster_name_2
+        - extent|length  % 2 != 0
+      register: device_det1
+
+    - name: Get the device names
+      set_fact:
+        device: "{{ device_det1['results'] | map(attribute=
+          'device_details.name') | list }}"
+      when:
+        - cluster_name_1 == cluster_name_2
+        - extent|length  % 2 != 0
+
+    - name: Get device details
+      dellemc_vplex_device:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        device_name: "{{ item }}"
+        state: 'present'
+      register: get_device
+      loop: "{{ device }}"
+      until: get_device.device_details.rebuild_status != "rebuilding"
+      retries: 100
+      delay: 5
+      when: cluster_name_1 == cluster_name_2
+
+    - name: Create virtual volumes
+      dellemc_vplex_virtual_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        virtual_volume_name: "ansible_loc_vol_{{ index }}"
+        supporting_device_name: "{{ item }}"
+        thin_enable: true
+        state: "present"
+      with_items:
+        - "{{ device }}"
+      loop_control:
+        index_var: index
+      when: cluster_name_1 == cluster_name_2
+      register: virt_vol
+
+    - name: Get the virtual volume names
+      set_fact:
+        virtual_volumes: "{{ virt_vol['results'] | map(attribute=
+          'storage_details.name') | list }}"
+      when: cluster_name_1 == cluster_name_2
+
+    - name: Create raid-1 device on VPLEX setup
+      include_role:
+        name: createdevice
+      vars:
+        cluster_name: "{{ cluster_name_1 }}"
+        array_name: "{{ array_name_1 }}"
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Get the device name list from first cluster
+      set_fact:
+        dev1: "{{ get_device['results'] | map(attribute=
+          'device_details.name') | list }}"
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Create raid-1 device on VPLEX setup
+      include_role:
+        name: createdevice
+      vars:
+        cluster_name: "{{ cluster_name_2 }}"
+        array_name: "{{ array_name_2 }}"
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Get the device name list from second cluster
+      set_fact:
+        dev2: "{{ get_device['results'] | map(attribute=
+          'device_details.name') | list }}"
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Set index_name var
+      set_fact:
+        index_name: "{{ range(0, dev2|length) | list }}"
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Create distributed device on VPLEX setup
+      dellemc_vplex_distributed_device:
+        <<: *connection_vars
+        target_cluster: 'cluster-2'
+        target_device: '{{ item.1 }}'
+        source_cluster: 'cluster-1'
+        source_device: '{{ item.0 }}'
+        rule_set: 'cluster-1-detaches'
+        sync: true
+        distributed_device_name: "dd_device_{{ item.2 }}"
+        state: 'present'
+      register: create_dd
+      with_together:
+        - "{{ dev1 }}"
+        - "{{ dev2 }}"
+        - "{{ index_name }}"
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Get the distributed device names
+      set_fact:
+        dd_dev: "{{ create_dd['results'] | map(attribute=
+          'dist_device_details.name') | list }}"
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Get device details
+      dellemc_vplex_distributed_device:
+        <<: *connection_vars
+        distributed_device_name: "{{ item }}"
+        state: 'present'
+      register: get_dd
+      loop: "{{ dd_dev }}"
+      until: get_dd.dist_device_details.rebuild_status != "rebuilding"
+      retries: 100
+      delay: 5
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Create distributed virtual volumes on VPLEX setup
+      dellemc_vplex_distributed_virtual_volume:
+        <<: *connection_vars
+        distributed_virtual_volume_name: "ansible_dist_vol_{{ index }}"
+        distributed_device_name: "{{ item }}"
+        thin_enable: true
+        state: "present"
+      with_items:
+        - "{{ dd_dev }}"
+      loop_control:
+        index_var: index
+      register: create_dvv
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Get the distributed virtual volume names
+      set_fact:
+        dist_virt_vols: "{{ create_dvv['results'] | map(attribute=
+          'dist_vv_details.name') | list }}"
+      when: cluster_name_1 != cluster_name_2
+
+    - name: Register initiator
+      dellemc_vplex_initiator:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        initiator_name: "{{ initiator_name }}_{{ index }}"
+        port_wwn: "{{ item }}"
+        registered: true
+        state: "present"
+      loop: "{{ port_wwn }}"
+      loop_control:
+        index_var: index
+      register: initiator
+
+    - name: Create storage view sv1 and add virtual volumes
+      dellemc_vplex_storage_view:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        storage_view_name: "{{ storage_view_name }}_1"
+        ports: "{{ port_name }}"
+        initiators: "{{ initiator_name }}_0"
+        initiator_state: "present-in-view"
+        virtual_volumes: "{{ item }}"
+        virtual_volume_state: "present-in-view"
+        state: "present"
+      with_items:
+        - "{{ virtual_volumes }}"
+      register: storage_view_1
+      when: cluster_name_1 == cluster_name_2
+
+    - name: Create storage view sv1 and add distributed virtual volumes
+      dellemc_vplex_storage_view:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name_1 }}"
+        storage_view_name: "{{ storage_view_name }}_1"
+        ports: "{{ port_name }}"
+        initiators: "{{ initiator_name }}_0"
+        initiator_state: "present-in-view"
+        virtual_volumes: "{{ item }}"
+        virtual_volume_state: "present-in-view"
+        state: "present"
+      with_items:
+        - "{{ dist_virt_vols }}"
+      register: storage_view_1
+      when: cluster_name_1 != cluster_name_2

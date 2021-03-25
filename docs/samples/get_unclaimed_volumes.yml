@@ -1,0 +1,35 @@
+# List of unclaimed Storage Volumes from a specified cluster in VPLEX
+---
+- name: List of unclaimed Storage Volumes from a specified cluster in VPLEX
+  hosts: localhost
+  connection: local
+
+  vars_files:
+    - vars/connection.yml
+    - vars/credentials.yml
+
+  vars:
+    input: &connection_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+      cluster_name: "{{ cluster_name }}"
+
+  collections:
+    - dellemc.vplex
+
+  tasks:
+    - name: Get list of all storage volumes in a given cluster
+      dellemc_vplex_gatherfacts:
+        <<: *connection_vars
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: "use"
+            filter_operator: "equal"
+            filter_value: "unclaimed"
+      register: volumes
+
+    - debug:
+        var: volumes

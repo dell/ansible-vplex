@@ -1,0 +1,82 @@
+# List of virtual volumes to cache invalidate from a specified cluster in VPLEX
+---
+- name: List of virtual volumes to cache invalidate in VPLEX
+  hosts: localhost
+  connection: local
+
+  vars_files:
+    - vars/connection.yml
+    - vars/credentials.yml
+
+  vars:
+    input: &connection_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: "{{ verifycert }}"
+
+  collections:
+    - dellemc.vplex
+
+  tasks:
+    - name: Get list of all virtual volumes in a given cluster
+      dellemc_vplex_gatherfacts:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - virt_vol
+      register: virtual_volumes
+
+    - debug:
+        var: virtual_volumes
+
+    - name: Set empty volumes list
+      set_fact:
+        all_volumes: []
+
+    - name: List of virtual volumes exported to storage view
+      set_fact:
+        all_volumes: "{{ all_volumes + [item] }}"
+      no_log: true
+      loop: "{{ virtual_volumes.VirtualVolumes }}"
+
+    - debug:
+        var: all_volumes
+
+    - name: Get list of unexported virtual volumes in a given cluster
+      dellemc_vplex_gatherfacts:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - virt_vol
+        filters:
+          - filter_key: "service_status"
+            filter_operator: "equal"
+            filter_value: "unexported"
+      register: virtual_volumes_unexported
+
+    - name: Set empty volumes list
+      set_fact:
+        cache_virtual_volumes: []
+
+    - name: List of virtual volumes to perform cache invalidate
+      set_fact:
+        cache_virtual_volumes: "{{ cache_virtual_volumes +
+          virtual_volumes.VirtualVolumes | difference
+          (virtual_volumes_unexported.VirtualVolumes) | list }}"
+
+    - debug:
+        var: cache_virtual_volumes
+
+    - name: cache invalidate on virtual volumes
+      dellemc_vplex_virtual_volume:
+        <<: *connection_vars
+        cluster_name: "{{ cluster_name }}"
+        virtual_volume_name: "{{ item }}"
+        state: present
+        cache_invalidate: true
+      loop: "{{ cache_virtual_volumes }}"
+      register: cache_invalidate_volumes
+
+    - debug:
+        var: cache_invalidate_volumes

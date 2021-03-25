@@ -1,6 +1,0 @@
----
-cluster_name_1: "first cluster name"
-cluster_name_2: "second cluster name"
-stor_volid_1: ["list of storage volume ID's of one cluster"]
-stor_volid_2: ["list of storage volume ID's of another cluster"]
-dist_vol_name: "distributed virtual volume name"

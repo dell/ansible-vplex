@@ -1,0 +1,110 @@
+# Create VPLEX virtual volumes across clusters and add it to a storage view
+---
+- name: VPLEX Metro End-to-End Provisioning
+  hosts: localhost
+  connection: local
+  vars_files:
+    - vars/connection.yml
+    - vars/credentials.yml
+    - vars/volume_name.yml
+
+  vars:
+    Vplexinput: &connection_vars
+      vplexhost: "{{ vplexhost }}"
+      vplexuser: "{{ vplexuser }}"
+      vplexpassword: "{{ vplexpassword }}"
+      verifycert: false
+
+  collections:
+    - dellemc.vplex
+
+  tasks:
+    - name: Create raid-1 device on VPLEX setup
+      include_role:
+        name: createdevice
+      vars:
+        cluster_name: "{{ cluster_name_1 }}"
+        array_name: "{{ array_name_1 }}"
+
+    - name: Get the device name list from first cluster
+      set_fact:
+        dev1: "{{ get_device['results'] | map(attribute=
+          'device_details.name') | list }}"
+
+    - name: Create raid-1 device on VPLEX setup
+      include_role:
+        name: createdevice
+      vars:
+        cluster_name: "{{ cluster_name_2 }}"
+        array_name: "{{ array_name_2 }}"
+
+    - name: Get the device name list from second cluster
+      set_fact:
+        dev2: "{{ get_device['results'] | map(attribute=
+          'device_details.name') | list }}"
+
+    - name: Set index_name var
+      set_fact:
+        index_name: "{{ range(0, dev2|length) | list }}"
+
+    - name: Create distributed device on VPLEX setup
+      dellemc_vplex_distributed_device:
+        <<: *connection_vars
+        target_cluster: "{{ cluster_name_2 }}"
+        target_device: '{{ item.1 }}'
+        source_cluster: "{{ cluster_name_1 }}"
+        source_device: '{{ item.0 }}'
+        rule_set: 'cluster-1-detaches'
+        sync: true
+        distributed_device_name: "dd_device_{{ item.2 }}"
+        state: 'present'
+      register: create_dd
+      with_together:
+        - "{{ dev1 }}"
+        - "{{ dev2 }}"
+        - "{{ index_name }}"
+
+    - name: Get the distributed device names
+      set_fact:
+        dd_dev: "{{ create_dd['results'] | map(attribute=
+          'dist_device_details.name') | list }}"
+
+    - name: Get device details
+      dellemc_vplex_distributed_device:
+        <<: *connection_vars
+        distributed_device_name: "{{ item }}"
+        state: 'present'
+      register: get_dd
+      loop: "{{ dd_dev }}"
+      until: get_dd.dist_device_details.rebuild_status != "rebuilding"
+      retries: 100
+      delay: 5
+
+    - name: Create distributed virtual volumes on VPLEX setup
+      dellemc_vplex_distributed_virtual_volume:
+        <<: *connection_vars
+        distributed_virtual_volume_name: "ansible_dist_vol_{{ index }}"
+        distributed_device_name: "{{ item }}"
+        thin_enable: true
+        state: "present"
+      with_items:
+        - "{{ dd_dev }}"
+      loop_control:
+        index_var: index
+      register: create_dvv
+
+    - name: Get the distributed virtual volume names
+      set_fact:
+        dist_virt_vols: "{{ create_dvv['results'] | map(attribute=
+          'dist_vv_details.name') | list }}"
+
+    - name: Create new storage view
+      include_role:
+        name: createstorageview
+      vars:
+        dist_virtual_volume: "{{ item }}"
+      with_items:
+        - "{{ dist_virt_vols  }}"
+
+    - name: Print storage view details
+      debug: var=storage_view
