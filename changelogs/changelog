@@ -1,0 +1,8 @@
+ancestor: null
+releases:
+  1.2.2:
+    changes:
+      release_summary: This is release 1.2.2 of ``dellemc.vplex``, released on 2024-04-03.
+    fragments:
+      - 1.2.2.yml
+    release_date: '2024-04-03'
