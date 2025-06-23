@@ -73,69 +73,69 @@ notes:
 '''
 
 EXAMPLES = r'''
-    - name: Create Extent using storage volume name
-      dellemc_vplex_extent:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        extent_name: "ansible_extent_1"
-        storage_volume_name: "ansible_st_vol"
-        state: "present"
+- name: Create Extent using storage volume name
+  dellemc_vplex_extent:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    extent_name: "ansible_extent_1"
+    storage_volume_name: "ansible_st_vol"
+    state: "present"
 
-    - name: Get Extent using extent name
-      dellemc_vplex_extent:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        extent_name: "ansible_extent"
-        state: "present"
+- name: Get Extent using extent name
+  dellemc_vplex_extent:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    extent_name: "ansible_extent"
+    state: "present"
 
-    - name: Delete Extent using extent name
-      dellemc_vplex_extent:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        extent_name: "ansible_extent"
-        state: "absent"
+- name: Delete Extent using extent name
+  dellemc_vplex_extent:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    extent_name: "ansible_extent"
+    state: "absent"
 
-    - name: Rename Extent using the extent name
-      dellemc_vplex_extent:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        new_extent_name: "ansible_extent_new_name"
-        extent_name: "ansible_extent"
-        state: "present"
+- name: Rename Extent using the extent name
+  dellemc_vplex_extent:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    new_extent_name: "ansible_extent_new_name"
+    extent_name: "ansible_extent"
+    state: "present"
 
-    - name: Rename Extent using the storage volume name
-      dellemc_vplex_extent:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        new_extent_name: "ansible_extent_new_name"
-        storage_volume_name: "ansible_st_vol"
-        state: "present"
+- name: Rename Extent using the storage volume name
+  dellemc_vplex_extent:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    new_extent_name: "ansible_extent_new_name"
+    storage_volume_name: "ansible_st_vol"
+    state: "present"
 
-    - name: Rename Extent using the storage volume id
-      dellemc_vplex_extent:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        new_extent_name: "ansible_extent_new_name"
-        storage_volume_id: "VPD83T3:60000970000197200581533030353438"
-        state: "present"
+- name: Rename Extent using the storage volume id
+  dellemc_vplex_extent:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    new_extent_name: "ansible_extent_new_name"
+    storage_volume_id: "VPD83T3:60000970000197200581533030353438"
+    state: "present"
 '''
 
 RETURN = r'''
@@ -296,7 +296,16 @@ class VplexExtent():  # pylint:disable=R0902
         Get extent details
         """
         try:
-            extent_details = self.extent.get_extent(self.cl_name, extent_name)
+            flag = False
+            all_extent = self.extent.get_extents(self.cl_name)
+            if all_extent:
+                for i in all_extent:
+                    if i.name == extent_name:
+                        flag = True
+            if flag:
+                extent_details = self.extent.get_extent(self.cl_name, extent_name)
+            else:
+                return None
             LOG.info("Got extent %s details from %s", extent_name,
                      self.cl_name)
             LOG.debug("Extent Details:\n%s", extent_details)
@@ -468,7 +477,6 @@ class VplexExtent():  # pylint:disable=R0902
         extent_info = None
         new_extent_info = None
         changed = False
-
         # Check validity of given extent name
         if extent_name is not None:
             self.name_check(extent_name, 'extent_name')
@@ -480,7 +488,6 @@ class VplexExtent():  # pylint:disable=R0902
                            " {1}".format(storage_volume_id, self.cl_name))
                 LOG.error(err_msg)
                 self.module.fail_json(msg=err_msg)
-
         # Get the extent details if the storage volume is in use
         if storage_volume_name:
             stor = storage_volume_name
@@ -516,7 +523,6 @@ class VplexExtent():  # pylint:disable=R0902
         # Getting the details of the extent if extent_name is present
         if extent_name and not extent_info:
             extent_info = self.get_extent(extent_name)
-
         if extent_info and state == 'absent':
             if extent_info.use == "used":
                 name = extent_info.name
@@ -582,7 +588,6 @@ class VplexExtent():  # pylint:disable=R0902
                                    new_extent_name))
                     LOG.error(err_msg)
                     self.module.fail_json(msg=err_msg)
-
                 if not new_extent_info:
                     # Validating the new_extent_name
                     self.name_check(new_extent_name, 'new_extent_name')

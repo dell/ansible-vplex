@@ -71,71 +71,70 @@ options:
 '''
 
 EXAMPLES = r'''
-    - name: Create consistency group
-      dellemc_vplex_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        cg_name: "ansible_cg"
-        state: "present"
+- name: Create consistency group
+  dellemc_vplex_consistency_group:
+  vplexhost: "{{ vplexhost }}"
+  vplexuser: "{{ vplexuser }}"
+  vplexpassword: "{{ vplexpassword }}"
+  verifycert: "{{ verifycert }}"
+  cluster_name: "cluster-1"
+  cg_name: "ansible_cg"
+  state: "present"
 
-    - name: Add virtual volumes to consistency group
-      dellemc_vplex_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        cg_name: "ansible_cg"
-        virtual_volumes: ["ansible_vv_1", "ansible_vv_2"]
-        virtual_volume_state: "present-in-cg"
-        state: "present"
+- name: Add virtual volumes to consistency group
+  dellemc_vplex_consistency_group:
+  vplexhost: "{{ vplexhost }}"
+  vplexuser: "{{ vplexuser }}"
+  vplexpassword: "{{ vplexpassword }}"
+  verifycert: "{{ verifycert }}"
+  cluster_name: "cluster-1"
+  cg_name: "ansible_cg"
+  virtual_volumes: ["ansible_vv_1", "ansible_vv_2"]
+  virtual_volume_state: "present-in-cg"
+  state: "present"
 
-    - name: Get consistency group
-      dellemc_vplex_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        cg_name: "ansible_cg"
-        state: "present"
+- name: Get consistency group
+  dellemc_vplex_consistency_group:
+  vplexhost: "{{ vplexhost }}"
+  vplexuser: "{{ vplexuser }}"
+  vplexpassword: "{{ vplexpassword }}"
+  verifycert: "{{ verifycert }}"
+  cluster_name: "cluster-1"
+  cg_name: "ansible_cg"
+  state: "present"
 
-    - name: Rename consistency group
-      dellemc_vplex_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        cg_name: "ansible_cg"
-        new_cg_name: "ansible_new_cg"
-        state: "present"
+- name: Rename consistency group
+  dellemc_vplex_consistency_group:
+  vplexhost: "{{ vplexhost }}"
+  vplexuser: "{{ vplexuser }}"
+  vplexpassword: "{{ vplexpassword }}"
+  verifycert: "{{ verifycert }}"
+  cluster_name: "cluster-1"
+  cg_name: "ansible_cg"
+  new_cg_name: "ansible_new_cg"
+  state: "present"
 
-    - name: Remove virtual volumes from consistency group
-      dellemc_vplex_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        cg_name: "ansible_cg"
-        virtual_volumes: ["ansible_vv_1", "ansible_vv_2"]
-        virtual_volume_state: "absent-in-cg"
-        state: "present"
+- name: Remove virtual volumes from consistency group
+  dellemc_vplex_consistency_group:
+  vplexhost: "{{ vplexhost }}"
+  vplexuser: "{{ vplexuser }}"
+  vplexpassword: "{{ vplexpassword }}"
+  verifycert: "{{ verifycert }}"
+  cluster_name: "cluster-1"
+  cg_name: "ansible_cg"
+  virtual_volumes: ["ansible_vv_1", "ansible_vv_2"]
+  virtual_volume_state: "absent-in-cg"
+  state: "present"
 
-    - name: Delete consistency group
-      dellemc_vplex_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        cg_name: "ansible_cg"
-        state: "absent"
-
+- name: Delete consistency group
+  dellemc_vplex_consistency_group:
+  vplexhost: "{{ vplexhost }}"
+  vplexuser: "{{ vplexuser }}"
+  vplexpassword: "{{ vplexpassword }}"
+  verifycert: "{{ verifycert }}"
+  cluster_name: "cluster-1"
+  cg_name: "ansible_cg"
+  state: "absent"
 '''
 
 RETURN = r'''
@@ -281,12 +280,20 @@ class ConsistencyGroup():
         Get the details of a consistency group.
         """
         try:
-            obj_cgrp = self.cgrp.get_consistency_group(cluster_name, cg_name)
-            LOG.info("Got consistency group details %s from %s", cg_name,
-                     cluster_name)
-            LOG.debug("Consistency group Details:\n%s", obj_cgrp)
-            cg_details = utils.serialize_content(obj_cgrp)
-            return cg_details
+            all_cgrp = self.cgrp.get_consistency_groups(cluster_name)
+            flag = False
+            for cg in all_cgrp:
+                if cg.name == cg_name:
+                    flag = True
+                    break
+            if flag:
+                obj_cgrp = self.cgrp.get_consistency_group(cluster_name, cg_name)
+                LOG.info("Got consistency group details %s from %s", cg_name, cluster_name)
+                LOG.debug("Consistency group Details:\n%s", obj_cgrp)
+                cg_details = utils.serialize_content(obj_cgrp)
+                return cg_details
+            else:
+                return None
         except utils.ApiException as err:
             err_msg = ("Could not get consistency group {0} of {1} due to"
                        " error: {2}".format(cg_name, cluster_name,

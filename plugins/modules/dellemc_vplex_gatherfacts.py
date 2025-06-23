@@ -503,7 +503,7 @@ class VplexGatherFacts():  # pylint: disable=R0904
             if filters_dict:
                 obj = clusters.get_clusters(**filters_dict)
             else:
-                obj = clusters.get_clusters()
+                obj = clusters.get_clusters(fields=utils.get_cluster_desired_fields())
             self.logmsg('cluster', obj)
             return obj
         except (utils.ApiException, ValueError, TypeError) as err:
@@ -991,8 +991,9 @@ class VplexGatherFacts():  # pylint: disable=R0904
                     extent_mig_job = self.get_extent_migration_list(
                         filters_dict=filters_dict)
                 if 'amp' in subset:
-                    amp = self.get_array_management_provider_list(
-                        cluster_name, filters_dict=filters_dict)
+                    vplex_setup = utils.get_vplex_setup(self.client)
+                    if '6.2' in vplex_setup:
+                        amp = self.get_array_management_provider_list(cluster_name, filters_dict=filters_dict)
                 if 'extent' in subset:
                     extent = self.get_extent_list(
                         cluster_name, filters_dict=filters_dict)

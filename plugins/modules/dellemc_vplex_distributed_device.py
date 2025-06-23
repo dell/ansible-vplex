@@ -86,58 +86,58 @@ notes:
 '''
 
 EXAMPLES = r'''
-    - name: Create a distributed device
-      dellemc_vplex_distributed_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_device_name: "ansible_test_dd"
-        target_cluster: "cluster-2"
-        target_device: "ansible_target_dev_1"
-        source_cluster: "cluster-1"
-        source_device: "ansible_source_dev_1"
-        rule_set: "cluster-1-detaches"
-        sync: true
-        state: "present"
+- name: Create a distributed device
+  dellemc_vplex_distributed_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_device_name: "ansible_test_dd"
+    target_cluster: "cluster-2"
+    target_device: "ansible_target_dev_1"
+    source_cluster: "cluster-1"
+    source_device: "ansible_source_dev_1"
+    rule_set: "cluster-1-detaches"
+    sync: true
+    state: "present"
 
-    - name: Get details of distributed device
-      dellemc_vplex_distributed_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_device_name: "ansible_test_dd"
-        state: "present"
+- name: Get details of distributed device
+  dellemc_vplex_distributed_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_device_name: "ansible_test_dd"
+    state: "present"
 
-    - name: Update rule set name of the distributed device
-      dellemc_vplex_distributed_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_device_name: "ansible_test_dd"
-        rule_set: "cluster-2-detaches"
-        state: "present"
+- name: Update rule set name of the distributed device
+  dellemc_vplex_distributed_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_device_name: "ansible_test_dd"
+    rule_set: "cluster-2-detaches"
+    state: "present"
 
-    - name: Rename distributed device
-      dellemc_vplex_distributed_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_device_name: "ansible_test_dd"
-        new_distributed_device_name: "new_ansible_test_dd"
-        state: "present"
+- name: Rename distributed device
+  dellemc_vplex_distributed_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_device_name: "ansible_test_dd"
+    new_distributed_device_name: "new_ansible_test_dd"
+    state: "present"
 
-    - name: Delete a distributed device
-      dellemc_vplex_distributed_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_device_name: "ansible_test_dd"
-        state: "absent"
+- name: Delete a distributed device
+  dellemc_vplex_distributed_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_device_name: "ansible_test_dd"
+    state: "absent"
 '''
 
 RETURN = r'''
@@ -263,13 +263,20 @@ class VplexDistributedDevice():
             msg = "Trying to obtain the distributed device {0}".format(
                 distributed_device_name)
             LOG.info(msg)
-            dist_device_obj = self.distdevice.get_distributed_device(
-                distributed_device_name)
-            LOG.info(
-                "Obtained the distributed device details of %s ",
-                distributed_device_name)
-            LOG.debug("Distributed device Details:\n%s", dist_device_obj)
-            return dist_device_obj, None
+            flag = False
+            all_dist_devices = self.distdevice.get_distributed_devices()
+            if all_dist_devices:
+                for dist_device in all_dist_devices:
+                    if dist_device.name == distributed_device_name:
+                        flag = True
+                        break
+            if flag:
+                dist_device_obj = self.distdevice.get_distributed_device(distributed_device_name)
+                LOG.info("Obtained the distributed device details of %s ", distributed_device_name)
+                LOG.debug("Distributed device Details:\n%s", dist_device_obj)
+                return dist_device_obj, None
+            else:
+                return None, None
         except utils.ApiException as err:
             err_msg = 'Could not get the distributed device {0}'.format(
                 distributed_device_name)
@@ -284,8 +291,7 @@ class VplexDistributedDevice():
             LOG.error("%s\n%s\n", e_msg, err)
             self.module.fail_json(msg=e_msg)
 
-    def create_distributed_device(self, dist_device_create_payload,
-                                  distributed_device_name):
+    def create_distributed_device(self, dist_device_create_payload, distributed_device_name):
         """creating distributed device """
         try:
             msg = "Trying to create the distributed device {0}".format(
@@ -348,9 +354,19 @@ class VplexDistributedDevice():
         """ checking if device present or not """
         try:
             LOG.info("Trying to check whether given device is present")
-            obj_device = self.device.get_device(cluster_name, device_name)
-            LOG.info("Found the device %s in %s", device_name, cluster_name)
-            return obj_device
+            all_devices = self.device.get_devices(cluster_name)
+            flag = False
+            if all_devices:
+                for device in all_devices:
+                    if device.name == device_name:
+                        flag = True
+                        break
+            if flag:
+                obj_device = self.device.get_device(cluster_name, device_name)
+                LOG.info("Found the device %s in %s", device_name, cluster_name)
+                return obj_device
+            else:
+                return None
         except utils.ApiException as err:
             err_msg = 'Could not find the device {0}'.format(device_name)
             err_msg += ' in {0} due to error: {1}'.format(
@@ -592,9 +608,13 @@ class VplexDistributedDevice():
 
     def check_rule_set_validity(self):
         """ Check for validity of rule_set """
-        rule_sets = self.distdevice.get_rule_sets()
-        LOG.info(rule_sets)
-        rules = [rule.name for rule in rule_sets]
+        vplex_setup_version = utils.get_vplex_setup(self.client)
+        if '6.2' in vplex_setup_version:
+            rule_sets = self.distdevice.get_rule_sets()
+            LOG.info(rule_sets)
+            rules = [rule.name for rule in rule_sets]
+        else:
+            rules = None
         return rules
 
     def perform_module_operation(self):
@@ -696,12 +716,13 @@ class VplexDistributedDevice():
                     target_cluster)
                 # check validity of rule_set
                 rule_sets = self.check_rule_set_validity()
-                if rule_set is not None and rule_set not in rule_sets:
-                    msg = "Could not create the distributed device {0} "\
-                        "because rule_set should be one of {1}".format(
-                            distributed_device_name, rule_sets)
-                    LOG.error(msg)
-                    self.module.fail_json(msg=msg)
+                if rule_sets:
+                    if rule_set is not None and rule_set not in rule_sets:
+                        msg = "Could not create the distributed device {0} "\
+                            "because rule_set should be one of {1}".format(
+                                distributed_device_name, rule_sets)
+                        LOG.error(msg)
+                        self.module.fail_json(msg=msg)
                 # form create Payload
                 payload = self.form_create_payload(
                     distributed_device_name,
@@ -727,23 +748,29 @@ class VplexDistributedDevice():
             # checking validity of rule_set
             rule_sets = self.check_rule_set_validity()
             LOG.info(rule_sets)
-            if rule_set not in rule_sets:
-                msg = "Could not update the distributed device {0} because "\
-                    "rule_set should be one of {1}".format(
-                        distributed_device_name, rule_sets)
-                LOG.error(msg)
-                self.module.fail_json(msg=msg)
+            if rule_sets:
+                if rule_set not in rule_sets:
+                    msg = "Could not update the distributed device {0} because "\
+                        "rule_set should be one of {1}".format(distributed_device_name, rule_sets)
+                    LOG.error(msg)
+                    self.module.fail_json(msg=msg)
             # idempotency
-            if dist_dev_details.rule_set_name == rule_set:
-                LOG.info("Provided rule_set is same compared to the "
-                         "device rule_set. No need to update")
-            else:
-                dist_device_patch_payload.append(
-                    {'op': 'replace',
-                     'path': '/rule_set_name',
-                     'value': rule_set})
-                LOG.info("Updating Rule set name of distributed device %s",
-                         distributed_device_name)
+                if dist_dev_details.rule_set_name == rule_set:
+                    LOG.info(
+                        "Provided rule_set is same compared to the device rule_set. No need to update"
+                    )
+                else:
+                    dist_device_patch_payload.append(
+                        {
+                            'op': 'replace',
+                            'path': '/rule_set_name',
+                            'value': rule_set
+                        }
+                    )
+                    LOG.info(
+                        "Updating Rule set name of distributed device %s",
+                        distributed_device_name
+                    )
         # rename distributed device
         if state == 'present' and new_distributed_device_name is not None:
             # check for validation of new name

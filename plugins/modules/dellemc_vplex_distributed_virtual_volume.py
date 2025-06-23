@@ -86,104 +86,104 @@ notes:
 '''
 
 EXAMPLES = r'''
-    - name: Create a distributed virtual volume
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_device_name: "ansible_test_dd_dev"
-        thin_enable: true
-        distributed_virtual_volume_name: "ansible_test_vol"
-        state: "present"
+- name: Create a distributed virtual volume
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_device_name: "ansible_test_dd_dev"
+    thin_enable: true
+    distributed_virtual_volume_name: "ansible_test_vol"
+    state: "present"
 
-    - name: Create a distributed virtual volume with wait_for_rebuild=false
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_device_name: "ansible_test_dd_dev"
-        thin_enable: true
-        distributed_virtual_volume_name: "ansible_test_vol"
-        wait_for_rebuild: false
-        state: "present"
+- name: Create a distributed virtual volume with wait_for_rebuild=false
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_device_name: "ansible_test_dd_dev"
+    thin_enable: true
+    distributed_virtual_volume_name: "ansible_test_vol"
+    wait_for_rebuild: false
+    state: "present"
 
-    - name: Get details of distributed virtual volume using name
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_virtual_volume_name: "ansible_test_vol"
-        state: "present"
+- name: Get details of distributed virtual volume using name
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_virtual_volume_name: "ansible_test_vol"
+    state: "present"
 
-    - name: Get details of distributed virtual volume using virtual volume ID
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_virtual_volume_id: "ansible_dist_dev_vol"
-        state: "present"
+- name: Get details of distributed virtual volume using virtual volume ID
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_virtual_volume_id: "ansible_dist_dev_vol"
+    state: "present"
 
-    - name: Rename distributed virtual volume using virtual volume name
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_virtual_volume_name: "ansible_test_vol"
-        new_distributed_virtual_volume_name: "ansible_test_vol_new"
-        state: "present"
+- name: Rename distributed virtual volume using virtual volume name
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_virtual_volume_name: "ansible_test_vol"
+    new_distributed_virtual_volume_name: "ansible_test_vol_new"
+    state: "present"
 
-    - name: Rename distributed virtual volume using virtual volume ID
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_virtual_volume_id: "ansible_dist_dev_vol"
-        new_distributed_virtual_volume_name: "ansible_dist_dev_vol_new"
-        state: "present"
+- name: Rename distributed virtual volume using virtual volume ID
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_virtual_volume_id: "ansible_dist_dev_vol"
+    new_distributed_virtual_volume_name: "ansible_dist_dev_vol_new"
+    state: "present"
 
-    - name: Expand distributed virtual volume using virtual volume name
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_virtual_volume_name: "ansible_test_vol"
-        expand: true
-        state: "present"
+- name: Expand distributed virtual volume using virtual volume name
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_virtual_volume_name: "ansible_test_vol"
+    expand: true
+    state: "present"
 
-    - name: Expand distributed virtual volume using virtual volume id
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_virtual_volume_id: "ansible_dist_dev_vol"
-        expand: true
-        state: "present"
+- name: Expand distributed virtual volume using virtual volume id
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_virtual_volume_id: "ansible_dist_dev_vol"
+    expand: true
+    state: "present"
 
-    - name: Delete distributed virtual volume using virtual volume name
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_virtual_volume_name: "ansible_test_vol"
-        state: "absent"
+- name: Delete distributed virtual volume using virtual volume name
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_virtual_volume_name: "ansible_test_vol"
+    state: "absent"
 
-    - name: Delete distributed virtual volume using virtual volume id
-      dellemc_vplex_distributed_virtual_volume:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_virtual_volume_id: "ansible_dist_dev_vol"
-        state: "absent"
+- name: Delete distributed virtual volume using virtual volume id
+  dellemc_vplex_distributed_virtual_volume:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_virtual_volume_id: "ansible_dist_dev_vol"
+    state: "absent"
 '''
 
 RETURN = r'''
@@ -371,13 +371,19 @@ class VplexDistributedVirtualVolume():    # pylint:disable=R0902
         Get distributed virtual volume details
         """
         try:
-            dist_vv_details = self.distvv.get_distributed_virtual_volume(
-                dist_vv_name)
-            LOG.info("Got distributed virtual volume details %s",
-                     dist_vv_name)
-            LOG.debug("Distributed Virtual Volume Details:\n%s",
-                      dist_vv_details)
-            return dist_vv_details
+            all_dist_vv = self.distvv.get_distributed_virtual_volumes()
+            flag = False
+            for dv in all_dist_vv:
+                if dv.name == dist_vv_name:
+                    flag = True
+                    break
+            if flag:
+                dist_vv_details = self.distvv.get_distributed_virtual_volume(dist_vv_name)
+                LOG.info("Got distributed virtual volume details %s", dist_vv_name)
+                LOG.debug("Distributed Virtual Volume Details:\n%s", dist_vv_details)
+                return dist_vv_details
+            else:
+                return None
         except utils.ApiException as err:
             err_msg = ("Could not get distributed virtual volume {0} due to"
                        " error: {1}".format(dist_vv_name,
@@ -505,10 +511,19 @@ class VplexDistributedVirtualVolume():    # pylint:disable=R0902
         Get distributed device details
         """
         try:
-            dev = self.distvv.get_distributed_device(dev_name)
-            LOG.info("Got Distributed Device details %s", dev_name)
-            LOG.debug("Distributed Device Details: %s", dev)
-            return dev
+            flag = False
+            all_dev = self.distvv.get_distributed_devices()
+            for dev in all_dev:
+                if dev.name == dev_name:
+                    flag = True
+                    break
+            if flag:
+                dev = self.distvv.get_distributed_device(dev_name)
+                LOG.info("Got Distributed Device details %s", dev_name)
+                LOG.debug("Distributed Device Details: %s", dev)
+                return dev
+            else:
+                return None
         except utils.ApiException as err:
             err_msg = ("Could not get the distributed device {0} due to"
                        " error: {1}".format(dev_name, utils.error_msg(err)))
