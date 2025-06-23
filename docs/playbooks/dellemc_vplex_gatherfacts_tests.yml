@@ -1,0 +1,85 @@
+# Gather Facts
+
+---
+- name: List the storage objects of VPLEX
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <**************>
+    vplexuser: <**************>
+    vplexpassword: <**************>
+    cluster_name: cluster-1
+    # Constant parameters
+    verifycert: false
+
+  # collections:
+  # dellemc.vplex
+
+  tasks:
+    # This task returns the list of all clusters present in VPLEX.
+    - name: List of clusters in VPLEX
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+      register: clusters
+
+    - name: "{{ Clusters['Clusters'] }}"
+    # This task displays the clusters name.
+      ansible.builtin.debug:
+        msg: "{{ clusters['Clusters'] }}"
+
+    # This task returns the list of all storage objects present in a cluster.
+    - name: List of all storage objects in a given cluster
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - stor_array
+          - stor_vol
+          - be_port
+          - port
+          - initiator
+          - stor_view
+          - virt_vol
+          - cg
+          - device
+          - extent
+          - dist_device
+          - dist_cg
+          - dist_virt_vol
+          - device_mig_job
+          - extent_mig_job
+          #  - amp
+      register: vplex_object
+
+    - name: "{{ Vplex_object }}"
+    # List the storage object names present in the cluster
+      ansible.builtin.debug:
+        msg: "{{ vplex_object }}"
+
+    # This task returns the list of storage volumes that are unclaimed
+    - name: List of all storage volumes that are unclaimed in a given cluster
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: use
+            filter_operator: equal
+            filter_value: unclaimed
+      register: volume
+
+    - name: "{{ Volume }}"
+      # List the storage volume names present in the cluster
+      ansible.builtin.debug:
+        msg: "{{ volume }}"

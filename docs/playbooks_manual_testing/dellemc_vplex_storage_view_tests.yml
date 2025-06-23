@@ -1,0 +1,313 @@
+# Manage Storage views
+
+---
+- name: Testing storage view operations
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexuser: <**************>
+    vplexpassword: <**************>
+    vplexhost: <**************>
+    cluster_name: "cluster-1"
+    ports: ["P0000000046E0124B-A0-FC00", "P0000000046E0124B-A0-FC01"]
+    port: ["P0000000046F0124B-B0-FC00"]
+    # Constant parameters
+    verifycert: false
+    storage_view_name: "ansible_storview"
+    new_storage_view_name: "ansible_storview_new"
+    initiators: []
+    virtual_volumes: []
+
+  collections:
+    - dellemc.vplex
+
+  tasks:
+    - name: Build a list of initiators
+      set_fact:
+        initiators: "{{ initiators }} + [ 'ansible_init_{{ item }}' ]"
+      with_sequence: start=1 end=2
+
+    - name: Build a list of virtual volumes
+      set_fact:
+        virtual_volumes: "{{ virtual_volumes }} + [ 'ansible_vir_{{ item }}' ]"
+      with_sequence: start=1 end=2
+
+    # Task to create a storage view
+    - name: Create a storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ storage_view_name }}"
+        ports: "{{ port }}"
+        state: "present"
+      register: create_storage_view
+    - debug:
+        var: create_storage_view
+
+    # Task to create a storage view - Idempotency
+    - name: Create a storage view  - Idempotency
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ storage_view_name }}"
+        ports: "{{ port }}"
+        state: "present"
+      register: create_storage_view_idem
+    - debug:
+        var: create_storage_view_idem
+
+    # Task to get a storage view details
+    - name: Get a storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ storage_view_name }}"
+        state: "present"
+      register: get_storage_view
+    - debug:
+        var: get_storage_view
+
+    # Task to rename a storage view
+    - name: Rename a storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ storage_view_name }}"
+        new_storage_view_name: "{{ new_storage_view_name }}"
+        state: "present"
+      register: rename_storage_view
+    - debug:
+        var: rename_storage_view
+
+    # Task to add ports to a storage view
+    - name: Add ports to the storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        ports: "{{ ports }}"
+        port_state: "present-in-view"
+        state: "present"
+      register: add_port_storage_view
+    - debug:
+        var: add_port_storage_view
+
+    # Task to add ports to a storage view
+    - name: Add ports to the storage view - Idempotency
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        ports: "{{ ports }}"
+        port_state: "present-in-view"
+        state: "present"
+      register: add_port_storage_view_idem
+    - debug:
+        var: add_port_storage_view_idem
+
+    # Task to add initiators to a storage view
+    - name: Add initiators to the storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        initiators: "{{ initiators }}"
+        initiator_state: "present-in-view"
+        state: "present"
+      register: add_initiator_storage_view
+    - debug:
+        var: add_initiator_storage_view
+
+    # Task to add initiators to a storage view - Idempotency
+    - name: Add initiators to the storage view - Idempotency
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        initiators: "{{ initiators }}"
+        initiator_state: "present-in-view"
+        state: "present"
+      register: add_initiator_storage_view_idem
+    - debug:
+        var: add_initiator_storage_view_idem
+
+    # Task to add virtualvolume to a storage view
+    - name: Add virtualvolume to the storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        virtual_volumes: "{{ virtual_volumes }}"
+        virtual_volume_state: "present-in-view"
+        state: "present"
+      register: add_vv_storage_view
+    - debug:
+        var: add_vv_storage_view
+
+    # Task to add virtualvolume to a storage view - Idempotency
+    - name: Add virtualvolume to the storage view - Idempotency
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        virtual_volumes: "{{ virtual_volumes }}"
+        virtual_volume_state: "present-in-view"
+        state: "present"
+      register: add_vv_storage_view_idem
+    - debug:
+        var: add_vv_storage_view_idem
+
+    # Task to remove ports from a storage view
+    - name: Remove ports from storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        ports: "{{ ports }}"
+        port_state: "absent-in-view"
+        state: "present"
+      register: remove_port_storage_view
+    - debug:
+        var: remove_port_storage_view
+
+    # Task to remove ports from a storage view - Idempotency
+    - name: Remove ports from storage view - Idempotency
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        ports: "{{ ports }}"
+        port_state: "absent-in-view"
+        state: "present"
+      register: remove_port_storage_view_idem
+    - debug:
+        var: remove_port_storage_view_idem
+
+    # Task to remove initiators from a storage view
+    - name: Remove initiators from storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        initiators: "{{ initiators }}"
+        initiator_state: "absent-in-view"
+        state: "present"
+      register: remove_initiator_storage_view
+    - debug:
+        var: remove_initiator_storage_view
+
+    # Task to remove initiators from a storage view - Idempotency
+    - name: Remove initiators from storage view - Idempotency
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        initiators: "{{ initiators }}"
+        initiator_state: "absent-in-view"
+        state: "present"
+      register: remove_initiator_storage_view_idem
+    - debug:
+        var: remove_initiator_storage_view_idem
+
+    # Task to remove virtualvolume from a storage view
+    - name: Remove virtualvolume from the storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        virtual_volumes: "{{ virtual_volumes }}"
+        virtual_volume_state: "absent-in-view"
+        state: "present"
+      register: remove_vv_storage_view
+    - debug:
+        var: remove_vv_storage_view
+
+    # Task to remove virtualvolume from a storage view - Idempotency
+    - name: Remove virtualvolume from the storage view - Idempotency
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        virtual_volumes: "{{ virtual_volumes }}"
+        virtual_volume_state: "absent-in-view"
+        state: "present"
+      register: remove_vv_storage_view_idem
+    - debug:
+        var: remove_vv_storage_view_idem
+
+    # Task to delete a storage view
+    - name: Delete a storage view
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        state: "absent"
+      register: delete_storage_view
+    - debug:
+        var: delete_storage_view
+
+    # Task to delete a storage view - Idempotency
+    - name: Delete a storage view - Idempotency
+      dellemc_vplex_storage_view:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_view_name: "{{ new_storage_view_name }}"
+        state: "absent"
+      register: delete_storage_view_idem
+    - debug:
+        var: delete_storage_view_idem

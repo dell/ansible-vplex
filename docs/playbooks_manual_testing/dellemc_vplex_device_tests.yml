@@ -1,0 +1,288 @@
+# Manage Devices
+
+---
+- name: Testing Device operations
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <************>
+    vplexuser: <************>
+    vplexpassword: <************>
+    cluster_name: "cluster-1"
+    # Constant parameters
+    verifycert: false
+    target_cluster: "cluster-2"
+    device_name: "ansible_dev"
+    device_name_1: "ansible_dev_1"
+    geometry: "raid-1"
+    new_device_name: "ansible_dev_new"
+    mirror_name: "ansible_mirr_1"
+    extents: []
+    extents_patch: []
+
+  collections:
+    - dellemc.vplex
+
+  tasks:
+
+    - name: Build a list of extents
+      set_fact:
+        extents: "{{ extents }} + [ 'ansible_ext_{{ item }}' ]"
+      with_sequence: start=3 end=4
+
+    - name: Build a list of extents for update
+      set_fact:
+        extents_patch: "{{ extents_patch }} + [ 'ansible_ext_upd_{{ item }}' ]"
+      with_sequence: start=1 end=2
+
+    - name: Create a raid-1 device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        geometry: "{{ geometry }}"
+        device_name: "{{ device_name }}"
+        extents: "{{ extents }}"
+        extent_state: "present-in-device"
+        state: "present"
+      register: create_device
+    - debug:
+        var: create_device
+
+    - name: Create a raid-1 device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        geometry: "{{ geometry }}"
+        device_name: "{{ device_name }}"
+        extents: "{{ extents }}"
+        extent_state: "present-in-device"
+        state: "present"
+      register: create_device_idem
+    - debug:
+        var: create_device_idem
+
+    - name: Add extent to device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        extents: "{{ extents_patch }}"
+        extent_state: "present-in-device"
+        state: "present"
+      register: add_extent
+    - debug:
+        var: add_extent
+
+    - name: Add extent to device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        extents: "{{ extents_patch }}"
+        extent_state: "present-in-device"
+        state: "present"
+      register: add_extent_idem
+    - debug:
+        var: add_extent_idem
+
+    - name: Get device from cluster
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        state: "present"
+      register: get_device
+    - debug:
+        var: get_device
+
+    - name: Update Transfer size of a device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        transfer_size: 40960
+        state: "present"
+      register: transfer_size
+    - debug:
+        var: transfer_size
+
+    - name: Update Transfer size of a device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        transfer_size: 40960
+        state: "present"
+      register: transfer_size_idem
+    - debug:
+        var: transfer_size_idem
+
+    - name: Rename a local device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        new_device_name: "{{ new_device_name }}"
+        state: "present"
+      register: rename_device
+    - debug:
+        var: rename_device
+
+    - name: Rename a local device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        new_device_name: "{{ new_device_name }}"
+        state: "present"
+      register: rename_device_idem
+    - debug:
+        var: rename_device_idem
+
+    - name: Remove extent from Device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        extents: "{{ extents_patch }}"
+        extent_state: "absent-in-device"
+        state: "present"
+      register: remove_extent
+    - debug:
+        var: remove_extent
+
+    - name: Remove extent from Device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        extents: "{{ extents_patch }}"
+        extent_state: "absent-in-device"
+        state: "present"
+      register: remove_extent_idem
+    - debug:
+        var: remove_extent_idem
+
+    - name: Delete device from cluster
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        state: "absent"
+      register: delete_device
+    - debug:
+        var: delete_device
+
+    - name: Delete device from cluster - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        state: "absent"
+      register: delete_device_idem
+    - debug:
+        var: delete_device_idem
+
+    - name: Add mirror to Device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        device_name: "{{ device_name_1 }}"
+        mirror_name: "{{ mirror_name }}"
+        mirror_state: "present-in-device"
+        state: "present"
+      register: add_mirror
+    - debug:
+        var: add_mirror
+
+    - name: Add mirror to Device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        device_name: "{{ device_name_1 }}"
+        mirror_name: "{{ mirror_name }}"
+        mirror_state: "present-in-device"
+        state: "present"
+      register: add_mirror_idem
+    - debug:
+        var: add_mirror_idem
+
+    - name: Remove mirror from Device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        device_name: "{{ device_name_1 }}"
+        mirror_name: "{{ mirror_name }}"
+        mirror_state: "absent-in-device"
+        state: "present"
+      register: rem_mirror
+    - debug:
+        var: rem_mirror
+
+    - name: Remove mirror from Device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        device_name: "{{ device_name_1 }}"
+        mirror_name: "{{ mirror_name }}"
+        mirror_state: "absent-in-device"
+        state: "present"
+      register: rem_mirror_idem
+    - debug:
+        var: rem_mirror_idem

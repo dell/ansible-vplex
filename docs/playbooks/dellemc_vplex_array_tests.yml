@@ -1,0 +1,62 @@
+# Rediscover StorageArray
+
+---
+- name: Rediscover StorageArray Tests
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <**************>
+    vplexuser: <**************>
+    vplexpassword: <**************>
+    cluster_name: "cluster-1"
+    # Constant parameters
+    verifycert: false
+    array_name: "array_name"
+
+  # collections:
+  # -dellemc.vplex
+
+  tasks:
+    # Get StorageArrays
+    - name: Get StorageArrays
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - stor_array
+      register: storage_arrays_details
+
+    # Get StorageArray
+    - name: Get StorageArray
+      dellemc_vplex_array:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        array_name: "{{ storage_arrays_details.StorageArrays[0] }}"
+      register: storage_array_details
+
+    - name: Debug StorageArray Details
+      ansible.builtin.debug:
+        var: storage_array_details
+
+    # Rediscover StorageArray
+    - name: Rediscover StorageArray
+      dellemc_vplex_array:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        array_name: "{{ storage_arrays_details.StorageArrays[0] }}"
+        rediscover: true
+      register: rediscover_storage_array_details
+
+    - name: Debug Rediscovered StorageArray Details
+      ansible.builtin.debug:
+        var: rediscover_storage_array_details

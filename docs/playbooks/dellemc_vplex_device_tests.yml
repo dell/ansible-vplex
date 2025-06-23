@@ -1,0 +1,530 @@
+# Manage Devices
+
+---
+- name: Testing Device operations
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <************>
+    vplexuser: <************>
+    vplexpassword: <************>
+    cluster_name: cluster-1
+    # Constant parameters
+    verifycert: false
+    target_cluster: cluster-1
+    device_name: ansible_dev
+    device_name_1: ansible_dev_1
+    geometry: raid-1
+    new_device_name: ansible_dev_new
+    mirror_name: ansible_mirr_1
+    extents: []
+    extents_patch: []
+  # collections:
+  # - dellemc.vplex
+
+  tasks:
+    - name: List of all storage volumes that are unclaimed in given cluster
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: use
+            filter_operator: equal
+            filter_value: unclaimed
+          - filter_key: capacity
+            filter_operator: lesser
+            filter_value: 5GB
+      register: volume_1
+
+    - name: Claim Storage Volumes in given cluster
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ item }}"
+        claimed_state: claimed
+        state: present
+      loop: "{{ volume_1.StorageVolumes[0:5] }}"
+      register: volume_claimed_1
+
+    - name: Get the storage volumes names
+      ansible.builtin.set_fact:
+        stor_vol_1: "{{ volume_claimed_1['results'] | map(attribute='storage_details.name') | list }}"
+
+    - name: Create extents in given cluster
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_name: "{{ item.0 }}"
+        extent_name: ansible_ext_for_dev_{{ item.1 }}
+        state: present
+      with_together:
+        - "{{ stor_vol_1 }}"
+        - "{{ range(1,6) | list }}"
+      register: extent_det_1
+
+    - name: List of all storage volumes that are unclaimed in target cluster
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: use
+            filter_operator: equal
+            filter_value: unclaimed
+          - filter_key: capacity
+            filter_operator: lesser
+            filter_value: 5GB
+      register: volume_2
+
+    - name: Claim Storage Volume in target cluster
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        storage_volume_id: "{{ volume_2.StorageVolumes[0] }}"
+        claimed_state: claimed
+        state: present
+      register: volume_claimed_2
+
+    - name: Create extent in target cluster
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        storage_volume_name: "{{ volume_claimed_2.storage_details.name }}"
+        extent_name: extent_{{ volume_claimed_2.storage_details.name.split(':')[-1] }}_1
+        state: present
+      register: extent_det_2
+
+    - name: Create devices for mirroring
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ item.0 }}"
+        device_name: "{{ item.1 }}"
+        extents: "{{ item.2 }}"
+        extent_state: present-in-device
+        state: present
+      with_together:
+        - ["{{ cluster_name }}", "{{ target_cluster }}"]
+        - ["{{ device_name_1 }}", "{{ mirror_name }}"]
+        - [ansible_ext_for_dev_5, "{{ extent_det_2.extent_details.name }}"]
+      register: device_det_1
+
+    - name: Get the extent names
+      ansible.builtin.set_fact:
+        extent_1: "{{ extent_det_1['results'] | map(attribute='extent_details.name') | list }}"
+
+    - name: Build a list of extents
+      ansible.builtin.set_fact:
+        extents: "{{ extents + [ 'ansible_ext_for_dev_' ~ item ] }}"
+      loop: "{{ range(3, 5) | list }}"
+
+    - name: Build a list of extents for update
+      ansible.builtin.set_fact:
+        extents_patch: "{{ extents_patch + [ 'ansible_ext_for_dev_' ~ item ] }}"
+      loop: "{{ range(1, 3) | list }}"
+
+    - name: Create a raid-1 device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        geometry: "{{ geometry }}"
+        device_name: "{{ device_name }}"
+        extents: "{{ extents }}"
+        extent_state: present-in-device
+        state: present
+      register: create_device
+
+    - name: Create_device
+      ansible.builtin.debug:
+        var: create_device
+
+    - name: Create a raid-1 device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        geometry: "{{ geometry }}"
+        device_name: "{{ device_name }}"
+        extents: "{{ extents }}"
+        extent_state: present-in-device
+        state: present
+      register: create_device_idem
+
+    - name: Create_device_idem
+      ansible.builtin.debug:
+        var: create_device_idem
+
+    - name: Add extent to device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        extents: "{{ extents_patch }}"
+        extent_state: present-in-device
+        state: present
+      register: add_extent
+
+    - name: Add_extent
+      ansible.builtin.debug:
+        var: add_extent
+
+    - name: Add extent to device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        extents: "{{ extents_patch }}"
+        extent_state: present-in-device
+        state: present
+      register: add_extent_idem
+
+    - name: Add_exten_idem
+      ansible.builtin.debug:
+        var: add_extent_idem
+
+    - name: Get device from cluster
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        state: present
+      register: get_device
+
+    - name: Get_device
+      ansible.builtin.debug:
+        var: get_device
+
+    - name: Update Transfer size of a device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        transfer_size: 134217728
+        state: present
+      register: transfer_size
+
+    - name: Transfer_size
+      ansible.builtin.debug:
+        var: transfer_size
+
+    - name: Update Transfer size of a device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        transfer_size: 134217728
+        state: present
+      register: transfer_size_idem
+
+    - name: Transfer_size_idem
+      ansible.builtin.debug:
+        var: transfer_size_idem
+
+    - name: Rename a local device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name }}"
+        new_device_name: "{{ new_device_name }}"
+        state: present
+      register: rename_device
+
+    - name: Rename_device
+      ansible.builtin.debug:
+        var: rename_device
+
+    - name: Rename a local device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        new_device_name: "{{ new_device_name }}"
+        state: present
+      register: rename_device_idem
+
+    - name: Rename_device_idem
+      ansible.builtin.debug:
+        var: rename_device_idem
+
+    - name: Wait for rebuild
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        state: present
+      register: wait_for_rebuild
+      until: wait_for_rebuild.device_details.rebuild_status == "done"
+      retries: 200
+      delay: 30
+
+    - name: Remove extent from Device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        extents: "{{ extents_patch }}"
+        extent_state: absent-in-device
+        state: present
+      register: remove_extent
+
+    - name: Remove_extent
+      ansible.builtin.debug:
+        var: remove_extent
+
+    - name: Remove extent from Device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        extents: "{{ extents_patch }}"
+        extent_state: absent-in-device
+        state: present
+      register: remove_extent_idem
+
+    - name: Remove_extent_idem
+      ansible.builtin.debug:
+        var: remove_extent_idem
+
+    - name: Delete device from cluster
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        state: absent
+      register: delete_device
+
+    - name: Delete_device
+      ansible.builtin.debug:
+        var: delete_device
+
+    - name: Delete device from cluster - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ new_device_name }}"
+        state: absent
+      register: delete_device_idem
+
+    - name: Delete_device_idem
+      ansible.builtin.debug:
+        var: delete_device_idem
+
+    - name: Add mirror to Device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        device_name: "{{ device_name_1 }}"
+        mirror_name: "{{ mirror_name }}"
+        mirror_state: present-in-device
+        state: present
+      register: add_mirror
+
+    - name: Add_mirror
+      ansible.builtin.debug:
+        var: add_mirror
+
+    - name: Add mirror to Device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        device_name: "{{ device_name_1 }}"
+        mirror_name: "{{ mirror_name }}"
+        mirror_state: present-in-device
+        state: present
+      register: add_mirror_idem
+
+    - name: Add_mirror_idem
+      ansible.builtin.debug:
+        var: add_mirror_idem
+
+    - name: Update Transfer size of a device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name_1 }}"
+        transfer_size: 134217728
+        state: present
+      register: transfer_size
+
+    - name: Wait for rebuild
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ device_name_1 }}"
+        state: present
+      register: wait_for_rebuild
+      until: wait_for_rebuild.device_details.rebuild_status == "done"
+      retries: 200
+      delay: 30
+
+    - name: Remove mirror from Device
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        device_name: "{{ device_name_1 }}"
+        mirror_name: "{{ mirror_name }}"
+        mirror_state: absent-in-device
+        state: present
+      register: rem_mirror
+
+    - name: Rem_mirror
+      ansible.builtin.debug:
+        var: rem_mirror
+
+    - name: Remove mirror from Device - Idempotency
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        device_name: "{{ device_name_1 }}"
+        mirror_name: "{{ mirror_name }}"
+        mirror_state: absent-in-device
+        state: present
+      register: rem_mirror_idem
+
+    - name: Rem_mirror_idem
+      ansible.builtin.debug:
+        var: rem_mirror_idem
+
+    - name: Delete devices
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ item.0 }}"
+        device_name: "{{ item.1 }}"
+        state: absent
+      with_together:
+        - ["{{ cluster_name }}", "{{ target_cluster }}"]
+        - ["{{ device_name_1 }}", "{{ mirror_name }}"]
+
+    - name: Delete extents from given cluster
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        extent_name: "{{ item }}"
+        state: absent
+      loop: "{{ extent_1 }}"
+
+    - name: Delete extent from target cluster
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        extent_name: "{{ extent_det_2.extent_details.name }}"
+        state: absent
+
+    - name: Unclaim Storage Volumes from given cluster
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ item }}"
+        claimed_state: unclaimed
+        state: present
+      loop: "{{ stor_vol_1 }}"
+
+    - name: Unclaim Storage Volume from target cluster
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        storage_volume_id: "{{ volume_claimed_2.storage_details.name }}"
+        claimed_state: unclaimed
+        state: present

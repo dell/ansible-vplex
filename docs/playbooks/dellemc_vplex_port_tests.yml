@@ -1,0 +1,120 @@
+# Manage Ports
+
+---
+- name: Manage Ports
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <**************>
+    vplexuser: <**************>
+    vplexpassword: <**************>
+    cluster_name: cluster-1
+    port_name: P0000000043E018B9-A0-FC02
+    # Constant parameters
+    verifycert: false
+
+  # collections:
+  # dellemc.vplex
+
+  tasks:
+    # Get Ports
+    - name: Get Ports
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - port
+      register: ports_details
+
+    # This task gets the port details
+    - name: Get port details
+      dellemc_vplex_port:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        port_name: "{{ ports_details.Ports[0] }}"
+        state: present
+      register: get_port
+
+    # Displays the port details
+    - name: Get_port
+      ansible.builtin.debug:
+        var: get_port
+
+    # This task Disables a port
+    - name: Disable a Port
+      dellemc_vplex_port:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        port_name: "{{ ports_details.Ports[0] }}"
+        enabled: false
+        state: present
+      register: disable_port
+
+    # Displays the port details
+    - name: Disable_port
+      ansible.builtin.debug:
+        var: disable_port
+
+    # This task Disables a port
+    - name: Disable a Port - Idempotency
+      dellemc_vplex_port:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        port_name: "{{ ports_details.Ports[0] }}"
+        enabled: false
+        state: present
+      register: disable_port_idem
+
+    # Displays the port details
+    - name: Disable_port_idem
+      ansible.builtin.debug:
+        var: disable_port_idem
+
+    # This task Enables a port
+    - name: Enable a Port
+      dellemc_vplex_port:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        port_name: "{{ ports_details.Ports[0] }}"
+        enabled: true
+        state: present
+      register: enable_port
+
+    # Displays the port details
+    - name: Enable_port
+      ansible.builtin.debug:
+        var: enable_port
+
+    # This task Enables a port
+    - name: Enable a Port - Idempotency
+      dellemc_vplex_port:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        port_name: "{{ ports_details.Ports[0] }}"
+        enabled: true
+        state: present
+      register: enable_port_idem
+
+    # Displays the port details
+    - name: Enable_port_idem
+      ansible.builtin.debug:
+        var: enable_port_idem

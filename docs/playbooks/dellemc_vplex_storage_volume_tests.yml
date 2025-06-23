@@ -1,0 +1,237 @@
+# Manage Storage Volumes
+
+---
+- name: Perform Storage Volume module operations on VPLEX
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <**************>
+    vplexuser: <**************>
+    vplexpassword: <**************>
+    cluster_name: cluster-1
+    storage_volume_id: VPD83T3:60000970000197200581533031443334
+    # Constant parameters
+    verifycert: false
+    storage_volume_name: ansible_storvol
+
+  # collections:
+  # dellemc.vplex
+
+  tasks:
+    # Get unclaimed storage volumes
+    - name: List of all storage objects in a given cluster
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: use
+            filter_operator: equal
+            filter_value: unclaimed
+      register: unclaimed_svols
+
+    # claim storage volume
+    - name: Claim Storage Volume
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ unclaimed_svols.StorageVolumes[0] }}"
+        claimed_state: claimed
+        state: present
+      register: claim_vol
+
+    - name: Claim_vol
+      ansible.builtin.debug:
+        var: claim_vol
+
+    # claim storage volume
+    - name: Claim Storage Volume - Idempotency
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ unclaimed_svols.StorageVolumes[0] }}"
+        claimed_state: claimed
+        state: present
+      register: claim_vol_idem
+
+    - name: Claim_vol_idem
+      ansible.builtin.debug:
+        var: claim_vol_idem
+
+    # rename storage volume
+    - name: Rename Storage Volume
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ unclaimed_svols.StorageVolumes[0] }}"
+        new_storage_volume_name: "{{ storage_volume_name }}"
+        get_itls: false
+        claimed_state: claimed
+        state: present
+      register: rename_vol
+
+    - name: Rename_vol
+      ansible.builtin.debug:
+        var: rename_vol
+
+    # update thin_rebuild value for storage volume
+    - name: Update thin rebuild value to false
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_name: "{{ storage_volume_name }}"
+        get_itls: false
+        thin_rebuild: false
+        claimed_state: claimed
+        state: present
+      register: thin_rebuild_vol
+
+    - name: Thin_rebuild_vol
+      ansible.builtin.debug:
+        var: thin_rebuild_vol
+
+    # update thin_rebuild value for storage volume
+    - name: Update thin rebuild value to false - Idempotency
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_name: "{{ storage_volume_name }}"
+        get_itls: false
+        thin_rebuild: false
+        claimed_state: claimed
+        state: present
+      register: thin_rebuild_vol_idem
+
+    - name: Thin_rebuild_vol_idem
+      ansible.builtin.debug:
+        var: thin_rebuild_vol_idem
+
+    # update thin_rebuild value for storage volume
+    - name: Update thin rebuild value to true by ID
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ unclaimed_svols.StorageVolumes[0] }}"
+        get_itls: false
+        thin_rebuild: true
+        claimed_state: claimed
+        state: present
+      register: thin_rebuild_vol
+
+    - name: Thin_rebuild_vol
+      ansible.builtin.debug:
+        var: thin_rebuild_vol
+
+    # update thin_rebuild value for storage volume
+    - name: Update thin rebuild value to true by ID - Idempotency
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ unclaimed_svols.StorageVolumes[0] }}"
+        get_itls: false
+        thin_rebuild: true
+        claimed_state: claimed
+        state: present
+      register: thin_rebuild_vol_idem
+
+    - name: Thin_rebuild_vol_idem
+      ansible.builtin.debug:
+        var: thin_rebuild_vol_idem
+
+    # get ITL's list for storage volume
+    - name: List ITL's list of storage volume
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_name: "{{ storage_volume_name }}"
+        get_itls: true
+        claimed_state: claimed
+        state: present
+      register: itls_list_vol
+
+    - name: Itls_list_vol
+      ansible.builtin.debug:
+        var: itls_list_vol
+
+    # get ITL's list for storage volume
+    - name: List ITL's list of storage volume by ID
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ unclaimed_svols.StorageVolumes[0] }}"
+        get_itls: true
+        claimed_state: claimed
+        state: present
+      register: itls_list_vol
+
+    - name: Itls_list_vol
+      ansible.builtin.debug:
+        var: itls_list_vol
+
+    # unclaim storage volume
+    - name: Unclaim Storage Volume
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ unclaimed_svols.StorageVolumes[0] }}"
+        get_itls: false
+        claimed_state: unclaimed
+        state: present
+      register: unclaim_vol
+
+    - name: Unclaim_vol
+      ansible.builtin.debug:
+        var: unclaim_vol
+
+    # unclaim storage volume
+    - name: Unclaim Storage Volume - Idempotency
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ unclaimed_svols.StorageVolumes[0] }}"
+        get_itls: false
+        claimed_state: unclaimed
+        state: present
+      register: unclaim_vol_idem
+
+    - name: Unclaim_vol_idem
+      ansible.builtin.debug:
+        var: unclaim_vol_idem

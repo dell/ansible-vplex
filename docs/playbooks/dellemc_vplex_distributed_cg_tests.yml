@@ -1,0 +1,582 @@
+#  Manage Distributed consistency group
+
+---
+- name: Testing Distributed consistency group operations
+  hosts: localhost
+  connection: local
+  vars:
+    # variable parameters
+    vplexhost: <*****************>
+    vplexuser: <*****************>
+    vplexpassword: <****************>
+    # constant parameters
+    verifycert: false
+    distributed_cg_name: ansible_dr_cg
+    new_distributed_cg_name: ansible_dr_cg_name
+    distributed_cg_vv: ansible_dr_cg_vol
+    distributed_virtual_volumes: []
+    detach_rule: cluster-1
+    resume_at: cluster-1
+
+  # collections:
+  # - dellemc.vplex
+
+  tasks:
+    - name: List of all storage volumes that are unclaimed in cluster-1
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-1
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: use
+            filter_operator: equal
+            filter_value: unclaimed
+          - filter_key: capacity
+            filter_operator: lesser
+            filter_value: 5GB
+      register: volume_1
+
+    - name: Claim Storage Volumes in cluster-1
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-1
+        storage_volume_id: "{{ item }}"
+        claimed_state: claimed
+        state: present
+      loop: "{{ volume_1.StorageVolumes[0:4] }}"
+      register: volume_claimed_1
+
+    - name: Get the storage volumes names
+      ansible.builtin.set_fact:
+        stor_vol_1: "{{ volume_claimed_1['results'] | map(attribute='storage_details.name') | list }}"
+
+    - name: Create extents in cluster-1
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-1
+        storage_volume_name: "{{ item }}"
+        extent_name: extent_{{ item.split(':')[-1] }}_1
+        state: present
+      loop: "{{ stor_vol_1 }}"
+      register: extent_det_1
+
+    - name: Get the extent names
+      ansible.builtin.set_fact:
+        extent_1: "{{ extent_det_1['results'] | map(attribute='extent_details.name') | list }}"
+
+    - name: Create devices in cluster-1
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-1
+        device_name: device_{{ item }}
+        extents: "{{ item }}"
+        extent_state: present-in-device
+        state: present
+      loop: "{{ extent_1 }}"
+      register: device_det_1
+
+    - name: Get the device names
+      ansible.builtin.set_fact:
+        device_1: "{{ device_det_1['results'] | map(attribute='device_details.name') | list }}"
+
+    - name: List of all storage volumes that are unclaimed in cluster-2
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-2
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: use
+            filter_operator: equal
+            filter_value: unclaimed
+          - filter_key: capacity
+            filter_operator: lesser
+            filter_value: 5GB
+      register: volume_2
+
+    - name: Claim Storage Volumes in cluster-2
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-2
+        storage_volume_id: "{{ item }}"
+        claimed_state: claimed
+        state: present
+      loop: "{{ volume_2.StorageVolumes[0:4] }}"
+      register: volume_claimed_2
+
+    - name: Get the storage volumes names
+      ansible.builtin.set_fact:
+        stor_vol_2: "{{ volume_claimed_2['results'] | map(attribute='storage_details.name') | list }}"
+
+    - name: Create extents in cluster-2
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-2
+        storage_volume_name: "{{ item }}"
+        extent_name: extent_{{ item.split(':')[-1] }}_1
+        state: present
+      loop: "{{ stor_vol_2 }}"
+      register: extent_det_2
+
+    - name: Get the extent names
+      ansible.builtin.set_fact:
+        extent_2: "{{ extent_det_2['results'] | map(attribute='extent_details.name') | list }}"
+
+    - name: Create devices in cluster-2
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-2
+        device_name: device_{{ item }}
+        extents: "{{ item }}"
+        extent_state: present-in-device
+        state: present
+      loop: "{{ extent_2 }}"
+      register: device_det_2
+
+    - name: Get the device names
+      ansible.builtin.set_fact:
+        device_2: "{{ device_det_2['results'] | map(attribute='device_details.name') | list }}"
+
+    - name: Create a Distributed devices
+      dellemc_vplex_distributed_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_device_name: "{{ item.0 }}_dd"
+        target_cluster: cluster-2
+        target_device: "{{ item.1 }}"
+        source_cluster: cluster-1
+        source_device: "{{ item.0 }}"
+        rule_set: cluster-1-detaches
+        sync: "false"
+        state: present
+      with_together:
+        - "{{ device_1 }}"
+        - "{{ device_2 }}"
+      register: create_dd
+
+    - name: Get the distributed device names
+      ansible.builtin.set_fact:
+        dist_devices: "{{ create_dd['results'] | map(attribute='dist_device_details.name') | list }}"
+
+    - name: Create a distributed virtual volumes
+      dellemc_vplex_distributed_virtual_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_device_name: "{{ item }}"
+        thin_enable: "true"
+        distributed_virtual_volume_name: ansible_dr_vv_{{ index }}
+        state: present
+      loop: "{{ dist_devices }}"
+      loop_control:
+        index_var: index
+      register: create_dist_vv
+
+    - name: Build a list of distributed virtual volumes
+      ansible.builtin.set_fact:
+        distributed_virtual_volumes: "{{ distributed_virtual_volumes + ['ansible_dr_vv_' ~ item] }}"
+      loop: "{{ range(1, 4) }}"
+
+    - name: Create a distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_vv }}"
+        distributed_virtual_volumes: [ansible_dr_vv_0]
+        distributed_virtual_volume_state: present-in-cg
+        state: present
+      register: create_dr_cg
+
+    - name: Create_dr_cg
+      ansible.builtin.debug:
+        var: create_dr_cg
+
+    - name: Create a distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        state: present
+      register: create_dr_cg
+
+    - name: Create_dr_cg
+      ansible.builtin.debug:
+        var: create_dr_cg
+
+    - name: Create a distributed cg - Idempotency
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        state: present
+      register: create_dr_cg_idemp
+
+    - name: Create_dr_cg_idemp
+      ansible.builtin.debug:
+        var: create_dr_cg_idemp
+
+    - name: Get a distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        state: present
+      register: get_dr_cg
+
+    - name: Get_dr_cg
+      ansible.builtin.debug:
+        var: get_dr_cg
+
+    - name: Add distributed virtual volumes to distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        distributed_virtual_volumes: "{{ distributed_virtual_volumes }}"
+        distributed_virtual_volume_state: present-in-cg
+        state: present
+      register: add_virtual_volumes_to_cg
+
+    - name: Add_virtual_volumes_to_cg
+      ansible.builtin.debug:
+        var: add_virtual_volumes_to_cg
+
+    - name: Add distributed virtual volumes to distributed cg - Idempotency
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        distributed_virtual_volumes: "{{ distributed_virtual_volumes }}"
+        distributed_virtual_volume_state: present-in-cg
+        state: present
+      register: add_virtual_volumes_to_cg_idemp
+
+    - name: Add_virtual_volumes_to_cg_idemp
+      ansible.builtin.debug:
+        var: add_virtual_volumes_to_cg_idemp
+
+    - name: Remove distributed virtual volumes from distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        distributed_virtual_volumes: "{{ distributed_virtual_volumes }}"
+        distributed_virtual_volume_state: absent-in-cg
+        state: present
+      register: remove_virtual_volumes_from_cg
+
+    - name: Remove_virtual_volumes_from_cg
+      ansible.builtin.debug:
+        var: remove_virtual_volumes_from_cg
+
+    - name: Remove distributed virtual volumes from distributed cg - Idempotency
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        distributed_virtual_volumes: "{{ distributed_virtual_volumes }}"
+        distributed_virtual_volume_state: absent-in-cg
+        state: present
+      register: remove_virtual_volumes_from_cg_idemp
+
+    - name: Remove_virtual_volumes_from_cg_idemp
+      ansible.builtin.debug:
+        var: remove_virtual_volumes_from_cg_idemp
+
+    - name: Disable auto-resume-at-loser on distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        auto_resume_at_loser: false
+        state: present
+      register: disable_dr_cg
+
+    - name: Disable_dr_cg
+      ansible.builtin.debug:
+        var: disable_dr_cg
+
+    - name: Disable auto-resume-at-loser on distributed cg  - Idempotency
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        auto_resume_at_loser: false
+        state: present
+      register: disable_dr_cg_idemp
+
+    - name: Disable_dr_cg_idemp
+      ansible.builtin.debug:
+        var: disable_dr_cg_idemp
+
+    - name: Enable auto-resume-at-loser on distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        auto_resume_at_loser: true
+        state: present
+      register: enable_dr_cg
+
+    - name: Enable_dr_cg
+      ansible.builtin.debug:
+        var: enable_dr_cg
+
+    - name: Enable auto-resume-at-loser on distributed cg  - Idempotency
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        auto_resume_at_loser: true
+        state: present
+      register: enable_dr_cg_idemp
+
+    - name: Enable_dr_cg_idemp
+      ansible.builtin.debug:
+        var: enable_dr_cg_idemp
+
+    - name: Update the detach rule of a distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        detach_rule: "{{ detach_rule }}"
+        state: present
+      register: detach_rule_dr_cg
+
+    - name: Detach_rule_dr_cg
+      ansible.builtin.debug:
+        var: detach_rule_dr_cg
+
+    - name: Update the detach rule of a distributed cg - Idempotency
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        detach_rule: "{{ detach_rule }}"
+        state: present
+      register: detach_rule_dr_cg_idemp
+
+    - name: Detach_rule_dr_cg_idemp
+      ansible.builtin.debug:
+        var: detach_rule_dr_cg_idemp
+
+    - name: Resume I/O on vv in distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_vv }}"
+        resume_at: "{{ resume_at }}"
+        state: present
+      register: resume_dr_cg
+
+    - name: Resume_dr_cg
+      ansible.builtin.debug:
+        var: resume_dr_cg
+
+    - name: Rename a distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_name }}"
+        new_distributed_cg_name: "{{ new_distributed_cg_name }}"
+        state: present
+      register: rename_cg
+
+    - name: Rename_cg
+      ansible.builtin.debug:
+        var: rename_cg
+
+    - name: Delete a distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ new_distributed_cg_name }}"
+        state: absent
+      register: delete_distributed_cg
+
+    - name: Delete_distributed_cg
+      ansible.builtin.debug:
+        var: delete_distributed_cg
+
+    - name: Delete a distributed cg
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ distributed_cg_vv }}"
+        state: absent
+      register: delete_distributed_cg
+
+    - name: Delete_distributed_cg
+      ansible.builtin.debug:
+        var: delete_distributed_cg
+
+    - name: Delete a distributed cg - Idempotency
+      dellemc_vplex_distributed_consistency_group:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_cg_name: "{{ new_distributed_cg_name }}"
+        state: absent
+      register: delete_distributed_cg_idemp
+
+    - name: Delete_distributed_cg_idemp
+      ansible.builtin.debug:
+        var: delete_distributed_cg_idemp
+
+    - name: Get the distributed vvol names
+      ansible.builtin.set_fact:
+        dist_vvols: "{{ create_dist_vv['results'] | map(attribute='dist_vv_details.name') | list }}"
+
+    - name: Delete a distributed vvs
+      dellemc_vplex_distributed_virtual_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_virtual_volume_name: "{{ item }}"
+        state: absent
+      loop: "{{ dist_vvols }}"
+
+    - name: Delete Distributed devices
+      dellemc_vplex_distributed_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        distributed_device_name: "{{ item }}"
+        state: absent
+      loop: "{{ dist_devices }}"
+
+    - name: Delete devices from cluster-1
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-1
+        device_name: "{{ item }}"
+        state: absent
+      loop: "{{ device_1 }}"
+
+    - name: Delete devices from cluster-2
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-2
+        device_name: "{{ item }}"
+        state: absent
+      loop: "{{ device_2 }}"
+
+    - name: Delete extents from cluster-1
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-1
+        extent_name: "{{ item }}"
+        state: absent
+      loop: "{{ extent_1 }}"
+
+    - name: Delete extents from cluster-2
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-2
+        extent_name: "{{ item }}"
+        state: absent
+      loop: "{{ extent_2 }}"
+
+    - name: Unclaim Storage Volumes
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-1
+        storage_volume_id: "{{ item }}"
+        claimed_state: unclaimed
+        state: present
+      loop: "{{ stor_vol_1 }}"
+
+    - name: Unclaim Storage Volumes
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: cluster-2
+        storage_volume_id: "{{ item }}"
+        claimed_state: unclaimed
+        state: present
+      loop: "{{ stor_vol_2 }}"

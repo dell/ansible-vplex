@@ -1,0 +1,601 @@
+# Manage Data Migration
+
+---
+- name: Testing Data Migration operations
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <************>
+    vplexuser: <************>
+    vplexpassword: <************>
+    cluster_name: cluster-1
+    # Constant parameters
+    verifycert: false
+    source_dev_name: ansible_dev_1
+    target_dev_name: ansible_dev_2
+    dev_migration_name: mig_dev_job_1
+    ext_source_name: ansible_ext_1
+    ext_target_name: ansible_ext_2
+    ext_migration_name: mig_ext_job_2
+    transfer_size: 40960
+    target_cluster: cluster-2
+
+  # collections:
+  # - dellemc.vplex
+
+  tasks:
+    - name: List of all storage volumes that are unclaimed in given cluster
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: use
+            filter_operator: equal
+            filter_value: unclaimed
+          - filter_key: capacity
+            filter_operator: lesser
+            filter_value: 5GB
+      register: volume_1
+
+    - name: Claim Storage Volumes in given cluster
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ item }}"
+        claimed_state: claimed
+        state: present
+      loop: "{{ volume_1.StorageVolumes[0:3] }}"
+      register: volume_claimed_1
+
+    - name: Get the storage volumes names
+      ansible.builtin.set_fact:
+        stor_vol_1: "{{ volume_claimed_1['results'] | map(attribute='storage_details.name') | list }}"
+
+    - name: Create extents in given cluster
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_name: "{{ item.0 }}"
+        extent_name: "{{ item.1 }}"
+        state: present
+      with_together:
+        - "{{ stor_vol_1 }}"
+        - ["extent_{{ stor_vol_1[0].split(':')[-1] }}", "{{ ext_source_name }}", "{{ ext_target_name }}"]
+      register: extent_det_1
+
+    - name: Get the extent names
+      ansible.builtin.set_fact:
+        extent_1: "{{ extent_det_1['results'] | map(attribute='extent_details.name') | list }}"
+
+    - name: Create devices in given cluster
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ item.1 }}"
+        extents: "{{ item.0 }}"
+        extent_state: present-in-device
+        state: present
+      with_together:
+        - "{{ extent_1[0:2] }}"
+        - ["{{ source_dev_name }}", "device_{{ extent_1[0] }}"]
+      register: device_det_1
+
+    - name: Get the device names
+      ansible.builtin.set_fact:
+        device_1: "{{ device_det_1['results'] | map(attribute='device_details.name') | list }}"
+
+    - name: Create virtual volume in given cluster
+      dellemc_vplex_virtual_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        virtual_volume_name: "{{ source_dev_name }}_vol"
+        supporting_device_name: "{{ source_dev_name }}"
+        state: present
+
+    - name: List of all storage volumes that are unclaimed in target cluster
+      dellemc_vplex_gatherfacts:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        gather_subset:
+          - stor_vol
+        filters:
+          - filter_key: use
+            filter_operator: equal
+            filter_value: unclaimed
+          - filter_key: capacity
+            filter_operator: lesser
+            filter_value: 5GB
+      register: volume_2
+
+    - name: Claim Storage Volume in target cluster
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        storage_volume_id: "{{ volume_2.StorageVolumes[0] }}"
+        claimed_state: claimed
+        state: present
+      register: volume_claimed_2
+
+    - name: Create extent in target cluster
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        storage_volume_name: "{{ volume_claimed_2.storage_details.name }}"
+        extent_name: extent_{{ volume_claimed_2.storage_details.name.split(':')[-1] }}_1
+        state: present
+      register: extent_det_2
+
+    - name: Create device in target cluster
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        device_name: "{{ target_dev_name }}"
+        extents: "{{ extent_det_2.extent_details.name }}"
+        extent_state: present-in-device
+        state: present
+      register: device_det_1
+
+    - name: Create a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        source_name: "{{ source_dev_name }}"
+        target_name: "{{ target_dev_name }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: device
+        state: present
+      register: create_dev_job
+
+    - name: Create_dev_job
+      ansible.builtin.debug:
+        var: create_dev_job
+
+    - name: Create a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        source_name: "{{ source_dev_name }}"
+        target_name: "{{ target_dev_name }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: device
+        state: present
+      register: create_dev_job_idem
+
+    - name: Create_dev_job_idem
+      ansible.builtin.debug:
+        var: create_dev_job_idem
+
+    - name: Get a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: device
+        state: present
+      register: get_dev_job
+
+    - name: Get_dev_job
+      ansible.builtin.debug:
+        var: get_dev_job
+
+    - name: Update a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        transfer_size: "{{ transfer_size }}"
+        status: pause
+        storage: device
+        state: present
+      register: update_dev_job
+
+    - name: Update_dev_job
+      ansible.builtin.debug:
+        var: update_dev_job
+
+    - name: Update a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        transfer_size: "{{ transfer_size }}"
+        status: pause
+        storage: device
+        state: present
+      register: update_dev_job_idem
+
+    - name: Update_dev_job_idem
+      ansible.builtin.debug:
+        var: update_dev_job_idem
+
+    - name: Resume a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        status: resume
+        storage: device
+        state: present
+      register: resume_dev_job
+
+    - name: Resume_dev_job
+      ansible.builtin.debug:
+        var: resume_dev_job
+
+    - name: Resume a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        status: resume
+        storage: device
+        state: present
+      register: resume_dev_job_idem
+
+    - name: Resume_dev_job_idem
+      ansible.builtin.debug:
+        var: resume_dev_job_idem
+
+    - name: Cancel a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        status: cancel
+        storage: device
+        state: present
+      register: cancel_dev_job
+
+    - name: Cancel_dev_job
+      ansible.builtin.debug:
+        var: cancel_dev_job
+
+    - name: Cancel a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        status: cancel
+        storage: device
+        state: present
+      register: cancel_dev_job_idem
+
+    - name: Cancel_dev_job_idem
+      ansible.builtin.debug:
+        var: cancel_dev_job_idem
+
+    - name: Delete a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: device
+        state: absent
+      register: delete_dev_job
+
+    - name: Delete_dev_job
+      ansible.builtin.debug:
+        var: delete_dev_job
+
+    - name: Delete a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: device
+        state: absent
+      register: delete_dev_job_idem
+
+    - name: Delete_dev_job_idem
+      ansible.builtin.debug:
+        var: delete_dev_job_idem
+
+    - name: Create an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        source_name: "{{ ext_source_name }}"
+        target_name: "{{ ext_target_name }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: extent
+        state: present
+      register: create_ext_job
+
+    - name: Create_ext_job
+      ansible.builtin.debug:
+        var: create_ext_job
+
+    - name: Create an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        source_name: "{{ ext_source_name }}"
+        target_name: "{{ ext_target_name }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: extent
+        state: present
+      register: create_ext_job_idem
+
+    - name: Create_ext_job_idem
+      ansible.builtin.debug:
+        var: create_ext_job_idem
+
+    - name: Get an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: extent
+        state: present
+      register: get_ext_job
+
+    - name: Get_ext_job
+      ansible.builtin.debug:
+        var: get_ext_job
+
+    - name: Update an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        transfer_size: "{{ transfer_size }}"
+        status: pause
+        storage: extent
+        state: present
+      register: update_ext_job
+
+    - name: Update_ext_job
+      ansible.builtin.debug:
+        var: update_ext_job
+
+    - name: Update an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        transfer_size: "{{ transfer_size }}"
+        status: pause
+        storage: extent
+        state: present
+      register: update_ext_job_idem
+
+    - name: Update_ext_job_idem
+      ansible.builtin.debug:
+        var: update_ext_job_idem
+
+    - name: Resume an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        status: resume
+        storage: extent
+        state: present
+      register: resume_ext_job
+
+    - name: Resume_ext_job
+      ansible.builtin.debug:
+        var: resume_ext_job
+
+    - name: Resume an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        status: resume
+        storage: extent
+        state: present
+      register: resume_ext_job_idem
+
+    - name: Resume_ext_job_idem
+      ansible.builtin.debug:
+        var: resume_ext_job_idem
+
+    - name: Cancel an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        status: cancel
+        storage: extent
+        state: present
+      register: cancel_ext_job
+
+    - name: Cancel_ext_job
+      ansible.builtin.debug:
+        var: cancel_ext_job
+
+    - name: Cancel an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        status: cancel
+        storage: extent
+        state: present
+      register: cancel_ext_job_idem
+
+    - name: Cancel_ext_job_idem
+      ansible.builtin.debug:
+        var: cancel_ext_job_idem
+
+    - name: Delete an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: extent
+        state: absent
+      register: delete_ext_job
+
+    - name: Delete_ext_job
+      ansible.builtin.debug:
+        var: delete_ext_job
+
+    - name: Delete an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: extent
+        state: absent
+      register: delete_ext_job_idem
+
+    - name: Delete_ext_job_idem
+      ansible.builtin.debug:
+        var: delete_ext_job_idem
+
+    - name: Delete virtual volume
+      dellemc_vplex_virtual_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        virtual_volume_name: "{{ source_dev_name }}_vol"
+        state: absent
+
+    - name: Delete devices
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        device_name: "{{ item }}"
+        state: absent
+      loop: "{{ device_1 }}"
+
+    - name: Delete device in target cluster
+      dellemc_vplex_device:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        device_name: "{{ target_dev_name }}"
+        state: absent
+
+    - name: Delete extents
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        extent_name: "{{ item }}"
+        state: absent
+      loop: "{{ extent_1 }}"
+
+    - name: Delete extent in target cluster
+      dellemc_vplex_extent:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        extent_name: "{{ extent_det_2.extent_details.name }}"
+        state: absent
+
+    - name: Unclaim Storage Volumes
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        storage_volume_id: "{{ item }}"
+        claimed_state: unclaimed
+        state: present
+      loop: "{{ stor_vol_1 }}"
+
+    - name: Unclaim Storage Volume from target cluster
+      dellemc_vplex_storage_volume:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ target_cluster }}"
+        storage_volume_id: "{{ volume_2.StorageVolumes[0] }}"
+        claimed_state: unclaimed
+        state: present

@@ -1,0 +1,144 @@
+# Manage distributed device
+
+---
+- name: Simple provisioning workflow for VPlex
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <**************>
+    vplexuser: <**************>
+    vplexpassword: <**************>
+    # Constant parameters
+    verifycert: false
+    distributed_device_name: 'add_test_dd'
+    source_cluster: 'cluster-1'
+    source_device: 'add_test_1'
+    target_cluster: 'cluster-2'
+    target_device: 'add_test_2'
+    rule_set: 'cluster-1-detaches'
+    sync: true
+    new_distributed_device_name: 'new_dd_test_name'
+
+  collections:
+    - dellemc.vplex
+
+  tasks:
+    # Create a Distributed device
+    - name: Create a Distributed device
+      dellemc_vplex_distributed_device:
+        vplexhost: '{{ vplexhost }}'
+        vplexuser: '{{ vplexuser }}'
+        vplexpassword: '{{ vplexpassword }}'
+        verifycert: '{{ verifycert }}'
+        distributed_device_name: '{{ distributed_device_name }}'
+        target_cluster: '{{ target_cluster }}'
+        target_device: '{{ target_device }}'
+        source_cluster: '{{ source_cluster }}'
+        source_device: '{{ source_device }}'
+        rule_set: '{{ rule_set }}'
+        sync: '{{ sync }}'
+        state: 'present'
+      register: create_dd
+    - debug:
+        var: create_dd
+
+    # Create a Distributed device
+    - name: Create a Distributed device - Idempotency
+      dellemc_vplex_distributed_device:
+        vplexhost: '{{ vplexhost }}'
+        vplexuser: '{{ vplexuser }}'
+        vplexpassword: '{{ vplexpassword }}'
+        verifycert: '{{ verifycert }}'
+        distributed_device_name: '{{ distributed_device_name }}'
+        target_cluster: '{{ target_cluster }}'
+        target_device: '{{ target_device }}'
+        source_cluster: '{{ source_cluster }}'
+        source_device: '{{ source_device }}'
+        rule_set: '{{ rule_set }}'
+        sync: '{{ sync }}'
+        state: 'present'
+      register: create_dd_idem
+    - debug:
+        var: create_dd_idem
+
+    # Rename Distributed device
+    - name: Rename Distributed device
+      dellemc_vplex_distributed_device:
+        vplexhost: '{{ vplexhost }}'
+        vplexuser: '{{ vplexuser }}'
+        vplexpassword: '{{ vplexpassword }}'
+        verifycert: '{{ verifycert }}'
+        distributed_device_name: '{{ distributed_device_name }}'
+        new_distributed_device_name: '{{ new_distributed_device_name }}'
+        state: 'present'
+      register: rename_dd
+    - debug:
+        var: rename_dd
+
+    # Update Rule set name of Distributed device
+    - name: Update Rule set name of Distributed device
+      dellemc_vplex_distributed_device:
+        vplexhost: '{{ vplexhost }}'
+        vplexuser: '{{ vplexuser }}'
+        vplexpassword: '{{ vplexpassword }}'
+        verifycert: '{{ verifycert }}'
+        distributed_device_name: '{{ new_distributed_device_name }}'
+        rule_set: 'cluster-2-detaches'
+        state: 'present'
+      register: rule_set
+    - debug:
+        var: rule_set
+
+    # Update Rule set name of Distributed device
+    - name: Update rule set name of distributed_device - Idempotency
+      dellemc_vplex_distributed_device:
+        vplexhost: '{{ vplexhost }}'
+        vplexuser: '{{ vplexuser }}'
+        vplexpassword: '{{ vplexpassword }}'
+        verifycert: '{{ verifycert }}'
+        distributed_device_name: '{{ new_distributed_device_name }}'
+        rule_set: 'cluster-2-detaches'
+        state: 'present'
+      register: rule_set_idem
+    - debug:
+        var: rule_set_idem
+
+    # Get details of Distributed device
+    - name: Get details of Distributed device
+      dellemc_vplex_distributed_device:
+        vplexhost: '{{ vplexhost }}'
+        vplexuser: '{{ vplexuser }}'
+        vplexpassword: '{{ vplexpassword }}'
+        verifycert: '{{ verifycert }}'
+        distributed_device_name: '{{ new_distributed_device_name }}'
+        state: 'present'
+      register: get_dd
+    - debug:
+        var: get_dd
+
+    # Delete Distributed device
+    - name: Delete Distributed device
+      dellemc_vplex_distributed_device:
+        vplexhost: '{{ vplexhost }}'
+        vplexuser: '{{ vplexuser }}'
+        vplexpassword: '{{ vplexpassword }}'
+        verifycert: '{{ verifycert }}'
+        distributed_device_name: '{{ new_distributed_device_name }}'
+        state: 'absent'
+      register: delete_dd
+    - debug:
+        var: delete_dd
+
+    # Delete Distributed device
+    - name: Delete Distributed device - Idempotency
+      dellemc_vplex_distributed_device:
+        vplexhost: '{{ vplexhost }}'
+        vplexuser: '{{ vplexuser }}'
+        vplexpassword: '{{ vplexpassword }}'
+        verifycert: '{{ verifycert }}'
+        distributed_device_name: '{{ new_distributed_device_name }}'
+        state: 'absent'
+      register: delete_dd_idem
+    - debug:
+        var: delete_dd_idem

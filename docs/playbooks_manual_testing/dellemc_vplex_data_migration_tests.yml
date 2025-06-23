@@ -1,0 +1,343 @@
+# Manage Data Migration
+
+---
+- name: Testing Data Migration operations
+  hosts: localhost
+  connection: local
+  vars:
+    # Variable parameters
+    vplexhost: <************>
+    vplexuser: <************>
+    vplexpassword: <************>
+    cluster_name: "cluster-1"
+    # Constant parameters
+    verifycert: false
+    source_dev_name: "ansible_dev_1"
+    target_dev_name: "ansible_dev_2"
+    dev_migration_name: "mig_dev_job_1"
+    ext_source_name: "ansible_ext_1"
+    ext_target_name: "ansible_ext_2"
+    ext_migration_name: "mig_ext_job_2"
+    transfer_size: 40960
+    target_cluster: "cluster-2"
+
+  collections:
+    - dellemc.vplex
+
+  tasks:
+
+    - name: Create a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        source_name: "{{ source_dev_name }}"
+        target_name: "{{ target_dev_name }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: "device"
+        state: "present"
+      register: create_dev_job
+    - debug:
+        var: create_dev_job
+
+    - name: Create a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        target_cluster: "{{ target_cluster }}"
+        source_name: "{{ source_dev_name }}"
+        target_name: "{{ target_dev_name }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: "device"
+        state: "present"
+      register: create_dev_job_idem
+    - debug:
+        var: create_dev_job_idem
+
+    - name: Get a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: "device"
+        state: "present"
+      register: get_dev_job
+    - debug:
+        var: get_dev_job
+
+    - name: Update a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        transfer_size: "{{ transfer_size }}"
+        status: "pause"
+        storage: "device"
+        state: "present"
+      register: update_dev_job
+    - debug:
+        var: update_dev_job
+
+    - name: Update a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        transfer_size: "{{ transfer_size }}"
+        status: "pause"
+        storage: "device"
+        state: "present"
+      register: update_dev_job_idem
+    - debug:
+        var: update_dev_job_idem
+
+    - name: Resume a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        status: "resume"
+        storage: "device"
+        state: "present"
+      register: resume_dev_job
+    - debug:
+        var: resume_dev_job
+
+    - name: Resume a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        status: "resume"
+        storage: "device"
+        state: "present"
+      register: resume_dev_job_idem
+    - debug:
+        var: resume_dev_job_idem
+
+    - name: Cancel a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        status: "cancel"
+        storage: "device"
+        state: "present"
+      register: cancel_dev_job
+    - debug:
+        var: cancel_dev_job
+
+    - name: Cancel a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        status: "cancel"
+        storage: "device"
+        state: "present"
+      register: cancel_dev_job_idem
+    - debug:
+        var: cancel_dev_job_idem
+
+    - name: Delete a device migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: "device"
+        state: "absent"
+      register: delete_dev_job
+    - debug:
+        var: delete_dev_job
+
+    - name: Delete a device migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ dev_migration_name }}"
+        storage: "device"
+        state: "absent"
+      register: delete_dev_job_idem
+    - debug:
+        var: delete_dev_job_idem
+
+    - name: Create an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        source_name: "{{ ext_source_name }}"
+        target_name: "{{ ext_target_name }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: "extent"
+        state: "present"
+      register: create_ext_job
+    - debug:
+        var: create_ext_job
+
+    - name: Create an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        cluster_name: "{{ cluster_name }}"
+        source_name: "{{ ext_source_name }}"
+        target_name: "{{ ext_target_name }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: "extent"
+        state: "present"
+      register: create_ext_job_idem
+    - debug:
+        var: create_ext_job_idem
+
+    - name: Get an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: "extent"
+        state: "present"
+      register: get_ext_job
+    - debug:
+        var: get_ext_job
+
+    - name: Update an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        transfer_size: "{{ transfer_size }}"
+        status: "pause"
+        storage: "extent"
+        state: "present"
+      register: update_ext_job
+    - debug:
+        var: update_ext_job
+
+    - name: Update an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        transfer_size: "{{ transfer_size }}"
+        status: "pause"
+        storage: "extent"
+        state: "present"
+      register: update_ext_job_idem
+    - debug:
+        var: update_ext_job_idem
+
+    - name: Resume an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        status: "resume"
+        storage: "extent"
+        state: "present"
+      register: resume_ext_job
+    - debug:
+        var: resume_ext_job
+
+    - name: Resume an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        status: "resume"
+        storage: "extent"
+        state: "present"
+      register: resume_ext_job_idem
+    - debug:
+        var: resume_ext_job_idem
+
+    - name: Cancel an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        status: "cancel"
+        storage: "extent"
+        state: "present"
+      register: cancel_ext_job
+    - debug:
+        var: cancel_ext_job
+
+    - name: Cancel an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        status: "cancel"
+        storage: "extent"
+        state: "present"
+      register: cancel_ext_job_idem
+    - debug:
+        var: cancel_ext_job_idem
+
+    - name: Delete an extent migration job
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: "extent"
+        state: "absent"
+      register: delete_ext_job
+    - debug:
+        var: delete_ext_job
+
+    - name: Delete an extent migration job idempotency
+      dellemc_vplex_data_migration:
+        vplexhost: "{{ vplexhost }}"
+        vplexuser: "{{ vplexuser }}"
+        vplexpassword: "{{ vplexpassword }}"
+        verifycert: "{{ verifycert }}"
+        migration_name: "{{ ext_migration_name }}"
+        storage: "extent"
+        state: "absent"
+      register: delete_ext_job_idem
+    - debug:
+        var: delete_ext_job_idem
