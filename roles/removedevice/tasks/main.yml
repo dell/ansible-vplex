@@ -1,4 +1,5 @@
 ---
+# tasks file for removedevice
 - name: "Setup variables for remove device in tasks"
   set_fact:
     input: &conn_vars

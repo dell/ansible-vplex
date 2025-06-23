@@ -85,21 +85,19 @@
 
     - name: set_fact to split the even extents for device creation
       set_fact:
-        extent_list: "{{ extent_list }} +
-                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+        extent_list: "{{ extent_list + [[extent[item], extent[item + 1]]] }}"
       loop: "{{ range(0, extent|length, 2) | list }}"
       when: extent|length % 2 == 0
 
     - name: set_fact to split the odd extents for device creation
       set_fact:
-        extent_list1: "{{ extent_list1 }} +
-                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+        extent_list1: "{{ extent_list1 + [[extent[item], extent[item + 1]]] }}"
       loop: "{{ range(0, extent|length - 1, 2) | list }}"
       when: extent|length % 2 != 0
 
     - name: set_fact to store last extent for odd extent
       set_fact:
-        extent_list1: "{{ extent_list1 }} +[['{{ extent[item] }}']]"
+        extent_list1: "{{ extent_list1 + [[extent[item]]] }}"
       loop: "{{ range(extent|length - 1,extent|length) | list }}"
       when: extent|length % 2 != 0
 
@@ -111,8 +109,7 @@
         extent_state: "present-in-device"
         geometry: "{{ geometry }}"
         state: "present"
-      with_items:
-        - "{{ extent_list }}"
+      loop: "{{ extent_list }}"
       loop_control:
         index_var: index
       when: extent|length % 2 == 0
@@ -132,7 +129,7 @@
         extent_state: "present-in-device"
         geometry: "{{ geometry }}"
         state: "present"
-      with_items:
+      loop:
         - "{{ extent_list1 }}"
       loop_control:
         index_var: index

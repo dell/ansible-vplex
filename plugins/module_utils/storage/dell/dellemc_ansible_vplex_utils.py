@@ -20,6 +20,11 @@ except ImportError:
     HAS_URLLIB3 = False
 
 try:
+    from vplexapi.api import AmpApi  # pylint: disable=unused-import
+except ImportError:
+    HAS_AMP = False
+
+try:
     import certifi  # pylint: disable=W0611
     HAS_CERTIFI = True
 except ImportError:
@@ -31,20 +36,20 @@ if HAS_VPLEXAPI_SDK:
     from vplexapi import ApiClient
     from vplexapi.api import ClustersApi, VersionApi
     from vplexapi.rest import ApiException
-    from vplexapi.api import AmpApi
-    from vplexapi.api import ClustersApi
-    from vplexapi.api import ConsistencyGroupApi
-    from vplexapi.api import DevicesApi
-    from vplexapi.api import DistributedStorageApi
-    from vplexapi.api import ExportsApi
-    from vplexapi.api import ExtentApi
-    from vplexapi.api import StorageArrayApi
-    from vplexapi.api import StorageVolumeApi
-    from vplexapi.api import VirtualVolumeApi
-    from vplexapi.api import HardwarePortsApi
-    from vplexapi.api import MapsApi
-    from vplexapi.api import DataMigrationApi
-    from vplexapi.api import DirectorApi
+    from vplexapi.api import ClustersApi  # pylint: disable=unused-import
+    from vplexapi.api import ConsistencyGroupApi  # pylint: disable=unused-import
+    from vplexapi.api import DevicesApi  # pylint: disable=unused-import
+    from vplexapi.api import DistributedStorageApi  # pylint: disable=unused-import
+    from vplexapi.api import ExportsApi  # pylint: disable=unused-import
+    from vplexapi.api import ExtentApi  # pylint: disable=unused-import
+    from vplexapi.api import StorageArrayApi  # pylint: disable=unused-import
+    from vplexapi.api import StorageVolumeApi  # pylint: disable=unused-import
+    from vplexapi.api import VirtualVolumeApi  # pylint: disable=unused-import
+    from vplexapi.api import HardwarePortsApi  # pylint: disable=unused-import
+    from vplexapi.api import MapsApi  # pylint: disable=unused-import
+    from vplexapi.api import DataMigrationApi  # pylint: disable=unused-import
+    from vplexapi.api import DirectorApi  # pylint: disable=unused-import
+
 
 if HAS_URLLIB3:
     from urllib3.exceptions import MaxRetryError
@@ -92,6 +97,14 @@ returns ApiClient object
 '''
 
 
+def get_cluster_desired_fields():
+    return (
+        'name,cluster_id,island_id,allow_auto_join,connected,'
+        'transition_indications,transition_progress,system_time,'
+        'ip_address,directors,is_local'
+    )
+
+
 def config_vplexapi(module_params):
     """This method provide the vplexapi connection establishment"""
     exit_code, msg = None, None
@@ -137,6 +150,7 @@ def config_vplexapi(module_params):
     try:
         cluster_client = ClustersApi(client)
         cluster_client.get_clusters_with_http_info(
+            fields=get_cluster_desired_fields(),
             _request_timeout=vplex_timeout)
     except (ApiException, MaxRetryError) as ex:
         if config.verify_ssl:
@@ -174,7 +188,10 @@ def verify_cluster_name(vplexclient, cluster_name):
     """Verify if given cluster is valid or not"""
     cluster_client = ClustersApi(vplexclient)
     try:
-        cluster_client.get_cluster(cluster_name)
+        cluster_client.get_cluster(
+            cluster_name,
+            fields=get_cluster_desired_fields(),
+        )
     except ApiException as ex:
         body = loads(ex.body)
         return body['error_code'], body['message']
@@ -244,8 +261,11 @@ returns logger object
 '''
 
 
-def get_logger(module_name, log_file_name='dellemc_ansible_vplex.log',
-               log_devel=logging.INFO):
+def get_logger(
+    module_name,
+    log_file_name='dellemc_ansible_vplex.log',
+    log_devel=logging.INFO
+):
     """This method initializes the logger module"""
     format_string = '%(asctime)-15s %(filename)s %(levelname)s : %(message)s'
     logging.basicConfig(filename=log_file_name, format=format_string)

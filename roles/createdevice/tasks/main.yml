@@ -1,4 +1,5 @@
 ---
+# tasks file for createdevice
 - name: Set the variables for the create device task
   set_fact:
     input: &conn_vars
@@ -51,6 +52,10 @@
     stor_vol: "{{ volume_claimed_2['results'] | map(attribute=
           'storage_details.name') | list }}"
 
+- name: Log stor_vol set_fact data
+  debug:
+    var: stor_vol
+
 - name: Create extents
   dellemc_vplex_extent:
     <<: *conn_vars
@@ -62,29 +67,46 @@
     index_var: index
   register: extent_det
 
+- name: Log extent details
+  debug:
+    var: extent_det
+
 - name: Get the extent names
-  set_fact:
+  ansible.builtin.set_fact:
     extent: "{{ extent_det['results'] | map(attribute=
           'extent_details.name') | list }}"
 
 - name: set_fact to split the even extents for device creation
   set_fact:
-    extent_list: "{{ extent_list }} +
-                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+    extent_list: "{{ extent_list + [[extent[item], extent[item + 1]]] }}"
   loop: "{{ range(0, extent|length, 2) | list }}"
+  when: extent|length  % 2 == 0
+
+- name: Log extent_list after splitting even extents
+  debug:
+    var: extent_list
   when: extent|length  % 2 == 0
 
 - name: set_fact to split the odd extents for device creation
   set_fact:
-    extent_list1: "{{ extent_list1 }} +
-                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+    extent_list1: "{{ extent_list1 + [[extent[item], extent[item + 1]]] }}"
   loop: "{{ range(0, extent|length - 1, 2) | list }}"
+  when: extent|length  % 2 != 0
+
+- name: Log extent_list1 after splitting odd extents
+  debug:
+    var: extent_list1
   when: extent|length  % 2 != 0
 
 - name: set_fact to store last extent for odd extent
   set_fact:
-    extent_list1: "{{ extent_list1 }} +[['{{ extent[item] }}']]"
+    extent_list1: "{{ extent_list1 + [[extent[item]]] }}"
   loop: "{{ range(extent|length - 1,extent|length) | list }}"
+  when: extent|length  % 2 != 0
+
+- name: Log extent_list1 after storing last odd extent
+  debug:
+    var: extent_list1
   when: extent|length  % 2 != 0
 
 - name: Create devices even
@@ -108,6 +130,10 @@
           'device_details.name') | list }}"
   when: extent|length  % 2 == 0
 
+- name: Debug device_det results
+  debug:
+    var: device_det.results    
+
 - name: Create devices odd
   dellemc_vplex_device:
     <<: *conn_vars
@@ -129,13 +155,16 @@
           'device_details.name') | list }}"
   when: extent|length  % 2 != 0
 
-- name: Get device details
+- name: Wait for each device to finish rebuilding
   dellemc_vplex_device:
     <<: *conn_vars
     device_name: "{{ item }}"
     state: 'present'
   register: get_device
-  loop: "{{ device }}"
   until: get_device.device_details.rebuild_status != "rebuilding"
   retries: 100
   delay: 5
+  loop: "{{ device }}"
+  loop_control:
+    label: "{{ item }}"
+    
