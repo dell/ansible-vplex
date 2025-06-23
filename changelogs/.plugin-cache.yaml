@@ -15,80 +15,80 @@ plugins:
       description: Rediscover Array on VPLEX Storage System
       name: dellemc_vplex_array
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_consistency_group:
       description: Manage consistency group on VPLEX Storage System
       name: dellemc_vplex_consistency_group
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_data_migration:
       description: Manage data migration on VPLEX Storage System
       name: dellemc_vplex_data_migration
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_device:
       description: Manage storage device on VPLEX Storage System
       name: dellemc_vplex_device
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_distributed_consistency_group:
       description: Manage VPLEX distributed consistency group
       name: dellemc_vplex_distributed_consistency_group
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_distributed_device:
       description: Manage distributed device on VPLEX Storage System
       name: dellemc_vplex_distributed_device
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_distributed_virtual_volume:
       description: Manage Distributed Virtual Volumes on VPLEX Storage Object
       name: dellemc_vplex_distributed_virtual_volume
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_extent:
       description: Manage Extents on VPLEX Storage Object
       name: dellemc_vplex_extent
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_gatherfacts:
       description: Gathers information about VPLEX Storage details
       name: dellemc_vplex_gatherfacts
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_initiator:
       description: Manage Initiators on VPLEX Storage Object
       name: dellemc_vplex_initiator
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_maps:
       description: Get storage entity usage hierarchy map
       name: dellemc_vplex_maps
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_port:
       description: Manage Ports on VPLEX Storage System
       name: dellemc_vplex_port
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_storage_view:
       description: Manage storage views on VPLEX Storage System
       name: dellemc_vplex_storage_view
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_storage_volume:
       description: Manage VPLEX storage volume
       name: dellemc_vplex_storage_volume
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
     dellemc_vplex_virtual_volume:
       description: Manage VPLEX virtual volume
       name: dellemc_vplex_virtual_volume
       namespace: ''
-      version_added: 1.2.0
+      version_added: 1.3.0
   netconf: {}
   shell: {}
   strategy: {}
   test: {}
   vars: {}
-version: 1.2.2
+version: 1.3.0
