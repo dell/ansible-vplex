@@ -84,104 +84,104 @@ options:
 '''
 
 EXAMPLES = r'''
-    - name: Create a distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        state: "present"
+- name: Create a distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    state: "present"
 
-    - name: Get a distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        state: "present"
+- name: Get a distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    state: "present"
 
-    - name: Rename a distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        new_distributed_cg_name: "ansible_dr_cg_name"
-        state: "present"
+- name: Rename a distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    new_distributed_cg_name: "ansible_dr_cg_name"
+    state: "present"
 
-    - name: Add distributed volumes to distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        distributed_virtual_volumes: ["ansible_dr_vv_1","ansible_dr_vv_2"]
-        distributed_virtual_volume_state: "present-in-cg"
-        state: "present"
+- name: Add distributed volumes to distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    distributed_virtual_volumes: ["ansible_dr_vv_1", "ansible_dr_vv_2"]
+    distributed_virtual_volume_state: "present-in-cg"
+    state: "present"
 
-    - name: Remove distributed volumes from distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        distributed_virtual_volumes: ["ansible_dr_vv_1","ansible_dr_vv_2"]
-        distributed_virtual_volume_state: "absent-in-cg"
-        state: "present"
+- name: Remove distributed volumes from distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    distributed_virtual_volumes: ["ansible_dr_vv_1", "ansible_dr_vv_2"]
+    distributed_virtual_volume_state: "absent-in-cg"
+    state: "present"
 
-    - name: Disable auto_resume_at_loser in distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        auto_resume_at_loser: false
-        state: "present"
+- name: Disable auto_resume_at_loser in distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    auto_resume_at_loser: false
+    state: "present"
 
-    - name: Enable auto_resume_at_loser in distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        auto_resume_at_loser: true
-        state: "present"
+- name: Enable auto_resume_at_loser in distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    auto_resume_at_loser: true
+    state: "present"
 
-    - name: Update the detach rule of distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        detach_rule: "cluster-1"
-        state: "present"
+- name: Update the detach rule of distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    detach_rule: "cluster-1"
+    state: "present"
 
-    - name: Resume I/O on virtual volumes in distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_re_cg"
-        resume_at: "cluster-1"
-        state: "present"
+- name: Resume I/O on virtual volumes in distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_re_cg"
+    resume_at: "cluster-1"
+    state: "present"
 
-    - name: Delete a distributed cg
-      dellemc_vplex_distributed_consistency_group:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser}}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        distributed_cg_name: "ansible_dr_cg"
-        state: "absent"
+- name: Delete a distributed cg
+  dellemc_vplex_distributed_consistency_group:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser}}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    distributed_cg_name: "ansible_dr_cg"
+    state: "absent"
 '''
 
 RETURN = r'''
@@ -285,13 +285,20 @@ class DistributedConsistencyGroup():
         Get the details of a distributed consistency group.
         """
         try:
-            obj_dcgrp = self.dcgrp.get_distributed_consistency_group(
-                dr_cg_name)
-            LOG.info("Got distributed consistency group details %s",
-                     dr_cg_name)
-            LOG.debug("Distributed consistency group Details:\n%s", obj_dcgrp)
-            d_cg_details = utils.serialize_content(obj_dcgrp)
-            return d_cg_details
+            all_dcgrp = self.dcgrp.get_distributed_consistency_groups()
+            flag = False
+            if all_dcgrp:
+                for dcgrp in all_dcgrp:
+                    if dcgrp.name == dr_cg_name:
+                        flag = True
+            if flag:
+                obj_dcgrp = self.dcgrp.get_distributed_consistency_group(dr_cg_name)
+                LOG.info("Got distributed consistency group details %s", dr_cg_name)
+                LOG.debug("Distributed consistency group Details:\n%s", obj_dcgrp)
+                d_cg_details = utils.serialize_content(obj_dcgrp)
+                return d_cg_details
+            else:
+                None
         except utils.ApiException as err:
             err_msg = ("Could not get distributed consistency group {0} due to"
                        " error: {1}".format(dr_cg_name, utils.error_msg(err)))
@@ -385,17 +392,25 @@ class DistributedConsistencyGroup():
         try:
             dr_vol_details = None
             used_dr_cg_name = None
-            dr_vol_details = self.dcgrp.get_distributed_virtual_volume(
-                dr_vol_name)
-            if dr_vol_details:
+            all_dr_vol = self.dcgrp.get_distributed_virtual_volumes()
+            flag = False
+            if all_dr_vol:
+                for dr_vol in all_dr_vol:
+                    if dr_vol.name == dr_vol_name:
+                        dr_vol_details = self.dcgrp.get_distributed_virtual_volume(
+                            dr_vol_name)
+                        flag = True
+                        break
+            if flag and dr_vol_details:
                 LOG.debug("Distributed virtual volume details:\n%s",
                           str(dr_vol_details))
                 if dr_vol_details.consistency_group is not None:
                     used_dr_cg_name = \
                         dr_vol_details.consistency_group.split('/')[-1]
                 locality = dr_vol_details.locality
-            return (locality, used_dr_cg_name)
-
+                return (locality, used_dr_cg_name)
+            else:
+                return (None, None)
         except (utils.ApiException, ValueError, TypeError) as err:
             err_msg = "Could not get distributed virtual volume {0} due"
             err_msg = err_msg.format(dr_vol_name) + " to error: {0}"

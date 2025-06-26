@@ -1,0 +1,12 @@
+---
+# defaults file for createstorageview
+
+init_1_name: 'ansible-init1'
+init_1_wwn: 'initiator port-wwn 1'  
+init_2_name: 'ansible-init2'
+init_2_wwn: 'initiator port-wwn 2'
+
+feports: ['list of front-end VPLEX ports']
+target_port: "{{ feports[0] }}"
+
+storageview_name: 'storage view name'

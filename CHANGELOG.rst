@@ -4,10 +4,10 @@ Dellemc.Vplex Release Notes
 
 .. contents:: Topics
 
-v1.2.2
+v1.3.0
 ======
 
 Release Summary
 ---------------
 
-This is release 1.2.2 of ``dellemc.vplex``, released on 2024-04-03.
+This release adds enhancements to VPLEX module handling, including improved storage view support and updated validations.

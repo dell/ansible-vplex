@@ -425,18 +425,34 @@ class VplexDataMigration():  # pylint: disable=R0902
         Get the details of a migration job
         """
         try:
+            flag = False
             job_details = None
             if self.storage == "device":
-                job_details = self.data.get_device_migration(migration_name)
+                all_jobs = self.data.get_device_migrations()
+                if all_jobs:
+                    for job in all_jobs:
+                        if job.name == migration_name:
+                            flag = True
+                            break
+                if flag:
+                    job_details = self.data.get_device_migration(migration_name)
             elif self.storage == "extent":
-                job_details = self.data.get_extent_migration(migration_name)
+                all_jobs = self.data.get_extent_migrations()
+                if all_jobs:
+                    for job in all_jobs:
+                        if job.name == migration_name:
+                            flag = True
+                            break
+                if flag:
+                    job_details = self.data.get_extent_migration(migration_name)
+            if flag and job_details:
 
-            LOG.info("Got the %s migration job details %s ", self.storage,
-                     migration_name)
-            LOG.info("%s migration job details:\n%s", self.storage,
-                     job_details)
-            job_details = utils.serialize_content(job_details)
-            return job_details
+                LOG.info("Got the %s migration job details %s ", self.storage, migration_name)
+                LOG.info("%s migration job details:\n%s", self.storage, job_details)
+                job_details = utils.serialize_content(job_details)
+                return job_details
+            else:
+                return None
         except utils.ApiException as err:
             err_msg = ("Could not get {0} migration job {1} details due to"
                        " error: {2}".format(self.storage, migration_name,
@@ -473,6 +489,7 @@ class VplexDataMigration():  # pylint: disable=R0902
                 data_payload['paused'] = True
             else:
                 data_payload['paused'] = False
+            job_details = None
             if self.storage == "device":
                 job_details = self.data.create_device_migration(
                     data_payload)
@@ -533,6 +550,7 @@ class VplexDataMigration():  # pylint: disable=R0902
 
         try:
             LOG.info("Final payload: %s", data_patch_payload)
+            job_details = None
             if self.storage == "device":
                 job_details = self.data.patch_device_migration(
                     migration_name, data_patch_payload)

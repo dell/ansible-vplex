@@ -100,119 +100,119 @@ notes:
 '''
 
 EXAMPLES = r'''
-    - name: Create a storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        ports: ["P0000000046F01150-B0-FC00"]
-        state: "present"
+- name: Create a storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    ports: ["P0000000046F01150-B0-FC00"]
+    state: "present"
 
-    - name: Delete a storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        state: "absent"
+- name: Delete a storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    state: "absent"
 
-    - name: Get a storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        state: "present"
+- name: Get a storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    state: "present"
 
-    - name: Rename a storage_view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        new_storage_view_name: "ansible_stor_view_new"
-        state: "present"
+- name: Rename a storage_view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    new_storage_view_name: "ansible_stor_view_new"
+    state: "present"
 
-    - name: Add ports to the storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        ports: ["P0000000046E01150-A0-FC00", "P0000000046E01150-A0-FC01"]
-        port_state: "present-in-view"
-        state: "present"
+- name: Add ports to the storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    ports: ["P0000000046E01150-A0-FC00", "P0000000046E01150-A0-FC01"]
+    port_state: "present-in-view"
+    state: "present"
 
-    - name: Remove ports from storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        ports: ["P0000000046E01150-A0-FC00", "P0000000046E01150-A0-FC01"]
-        port_state: "absent-in-view"
-        state: "present"
+- name: Remove ports from storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    ports: ["P0000000046E01150-A0-FC00", "P0000000046E01150-A0-FC01"]
+    port_state: "absent-in-view"
+    state: "present"
 
-    - name: Add initiators to the storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        initiators: ["ansible_init_1", "ansible_init_2"]
-        initiator_state: "present-in-view"
-        state: "present"
+- name: Add initiators to the storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    initiators: ["ansible_init_1", "ansible_init_2"]
+    initiator_state: "present-in-view"
+    state: "present"
 
-    - name: Remove initiators from storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        initiators: ["ansible_init_1", "ansible_init_2"]
-        initiator_state: "absent-in-view"
-        state: "present"
+- name: Remove initiators from storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    initiators: ["ansible_init_1", "ansible_init_2"]
+    initiator_state: "absent-in-view"
+    state: "present"
 
-    - name: Add virtual volumes to the storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        virtual_volumes: ["ansible_virvol_1", "ansible_virvol_2"]
-        virtual_volume_state: "present-in-view"
-        state: "present"
+- name: Add virtual volumes to the storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    virtual_volumes: ["ansible_virvol_1", "ansible_virvol_2"]
+    virtual_volume_state: "present-in-view"
+    state: "present"
 
-    - name: Remove virtual volumes from storage view
-      dellemc_vplex_storage_view:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage_view_name: "ansible_stor_view"
-        virtual_volumes: ["ansible_virvol_1", "ansible_virvol_2"]
-        virtual_volume_state: "absent-in-view"
-        state: "present"
+- name: Remove virtual volumes from storage view
+  dellemc_vplex_storage_view:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage_view_name: "ansible_stor_view"
+    virtual_volumes: ["ansible_virvol_1", "ansible_virvol_2"]
+    virtual_volume_state: "absent-in-view"
+    state: "present"
 '''
 
 RETURN = r'''
@@ -362,13 +362,23 @@ class VplexStorageview():  # pylint:disable=R0902
         Get the storageview details
         """
         try:
-            storageview_details = self.storageview.get_storage_view(
-                self.cl_name, name)
-            msg = ("Successfully obtained the storageview {0} details "
-                   "from {1}".format(name, self.cl_name))
-            LOG.info(msg)
-            LOG.debug("Storageview details: %s", storageview_details)
-            return storageview_details
+            flag = False
+            all_storageview_details = self.storageview.get_storage_views(
+                self.cl_name)
+            for storageview_details in all_storageview_details:
+                if storageview_details.name == name:
+                    flag = True
+                    break
+            if not flag:
+                return None
+            else:
+                storageview_details = self.storageview.get_storage_view(
+                    self.cl_name, name)
+                msg = ("Successfully obtained the storageview {0} details "
+                       "from {1}".format(name, self.cl_name))
+                LOG.info(msg)
+                LOG.debug("Storageview details: %s", storageview_details)
+                return storageview_details
         except utils.ApiException as err:
             err_msg = ("Could not get storageview {0} in {1} due to error:"
                        " {2}".format(
@@ -492,7 +502,7 @@ class VplexStorageview():  # pylint:disable=R0902
         urid = "/vplex/v2/distributed_storage/distributed_virtual_volumes"
         uri = "/vplex/v2/clusters/{}/virtual_volumes/{}"
         for key, val in self.vir_vol.items():
-            if key == "distvv" and len(self.vir_vol[key]) != 0:
+            if key == "distvv" and len(val) != 0:
                 for data in val:
                     volume.append(urid + "/{0}".format(data))
             else:
@@ -569,7 +579,15 @@ class VplexStorageview():  # pylint:disable=R0902
             for port in self.ports:
                 obj = None
                 try:
-                    obj = self.storageview.get_port(self.cl_name, port)
+                    flag = False
+                    all_obj = self.storageview.get_ports(self.cl_name)
+                    if all_obj:
+                        for obj in all_obj:
+                            if obj.name == port:
+                                flag = True
+                                break
+                    if flag:
+                        obj = self.storageview.get_port(self.cl_name, port)
                 except (utils.ApiException, ValueError, TypeError) as err:
                     msg = "Could not get port {0} details in {1} due to"
                     err_msg = msg.format(port, self.cl_name) + " error {0}"
@@ -600,8 +618,17 @@ class VplexStorageview():  # pylint:disable=R0902
             for ini in self.initiators:
                 obj = None
                 try:
-                    obj = self.storageview.get_initiator_port(
-                        self.cl_name, ini)
+                    flag = False
+                    all_obj = self.storageview.get_initiator_ports(
+                        self.cl_name)
+                    if all_obj:
+                        for obj in all_obj:
+                            if obj.name == ini:
+                                flag = True
+                                break
+                    if flag:
+                        obj = self.storageview.get_initiator_port(
+                            self.cl_name, ini)
                 except (utils.ApiException, ValueError, TypeError) as err:
                     msg = "Could not get initiator {0} details in {1} due to"
                     err_msg = msg.format(ini, self.cl_name) + " error {0}"
@@ -750,11 +777,11 @@ class VplexStorageview():  # pylint:disable=R0902
             e_msg = utils.display_error(err_msg, err)
             LOG.error("%s\n%s\n", e_msg, err)
             self.module.fail_json(msg=e_msg)
-
-        vview_list = utils.serialize_content(get_map)
+        if get_map:
+            vview_list = utils.serialize_content(get_map)
         # Collect the storage view if it has virtual volume
-        if len(vview_list['parents']) > 0:
-            return True
+            if len(vview_list['parents']) > 0:
+                return True
         return False
 
     def payload(self, operation, path, value):  # pylint:disable=R0201

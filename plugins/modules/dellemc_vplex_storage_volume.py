@@ -120,7 +120,6 @@ EXAMPLES = r'''
     thin_rebuild: true
     claimed_state: "claimed"
     state: "present"
-
 '''
 
 RETURN = r'''
@@ -463,12 +462,14 @@ class StorageVolumeModule:
         vol_obj = None
         changed = False
 
+        err_msg = None
         if vol_name:
             vol_obj, err_msg = self.get_volume_by_name(vol_name)
-        if not vol_obj and vol_id:
+        elif vol_id:
             vol_obj, err_msg = self.get_volume_by_id(vol_id)
-        if not any([vol_name, vol_id]):
-            err_msg = "Both volume name and volume id can not be None"
+        else:
+            err_msg = "Both volume name and volume id cannot be None"
+            vol_obj = None
         if err_msg:
             LOG.error(err_msg)
 

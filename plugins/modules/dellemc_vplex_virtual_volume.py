@@ -88,6 +88,7 @@ options:
     - Defines to add/remove virtual volume to expand
     type: list
     elements: str
+    default: []
 
   remote_access:
     description:
@@ -469,16 +470,17 @@ class VirtualVolumeModule:  # pylint: disable=R0902
         err_msg = ("Could not get virtual volume {0} from {1} due to"
                    " error: ".format(vol_name, self.cluster_name))
         try:
-            res = self.virt_cl.get_virtual_volume(
-                cluster_name=self.cluster_name,
-                name=vol_name)
-            LOG.info("Got virtual volume details %s from %s", vol_name,
-                     self.cluster_name)
-            LOG.debug("Volume details: %s", res)
-            if res.locality == "local":
-                return res, None
-            err_msg += "{0} is not a local virtual volume".format(vol_name)
-            LOG.error("%s\n", err_msg)
+            all_vols = self.get_all_volumes(self.cluster_name)
+            data = [e for e in all_vols if e.name == vol_name]
+            if len(data) > 0:
+                res = self.virt_cl.get_virtual_volume(cluster_name=self.cluster_name, name=vol_name)
+                LOG.info("Got virtual volume details %s from %s", vol_name,
+                         self.cluster_name)
+                LOG.debug("Volume details: %s", res)
+                if res.locality == "local":
+                    return res, None
+                err_msg += "{0} is not a local virtual volume".format(vol_name)
+                LOG.error("%s\n", err_msg)
         except utils.ApiException as err:
             err_msg += "{0}".format(utils.error_msg(err))
             LOG.error("%s\n%s", err_msg, err)
@@ -661,10 +663,20 @@ class VirtualVolumeModule:  # pylint: disable=R0902
         """Get distributed virtual volume object by volume name"""
         LOG.info('Get distributed virtual volume by name')
         try:
-            res = self.dist_virt_cl.get_distributed_virtual_volume(vol_name)
-            LOG.info("Got distributed virtual volume details %s", vol_name)
-            LOG.debug("Volume details: %s", res)
-            return res, None
+            all_res = self.dist_virt_cl.get_distributed_virtual_volumes()
+            flag = False
+            if all_res:
+                for v in all_res:
+                    if v.name == vol_name:
+                        flag = True
+                        break
+            if flag:
+                res = self.dist_virt_cl.get_distributed_virtual_volume(vol_name)
+                LOG.info("Got distributed virtual volume details %s", vol_name)
+                LOG.debug("Volume details: %s", res)
+                return res, None
+            else:
+                return None, None
         except utils.ApiException as err:
             err_msg = ("Could not get distributed virtual volume {0} from"
                        " {1} due to error: {2}".format(

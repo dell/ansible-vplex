@@ -89,101 +89,101 @@ notes:
 '''
 
 EXAMPLES = r'''
-    - name: Register Initiator with port_wwn
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        initiator_name: "ansible_init"
-        port_wwn: " 0x10000000c9b82e34"
-        host_type: "hpux"
-        registered: true
-        state: "present"
+- name: Register Initiator with port_wwn
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    initiator_name: "ansible_init"
+    port_wwn: " 0x10000000c9b82e34"
+    host_type: "hpux"
+    registered: true
+    state: "present"
 
-    - name: Get details of an Initiator with port_wwn
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        port_wwn: "0x10000000c9b82e34"
-        state: "present"
+- name: Get details of an Initiator with port_wwn
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    port_wwn: "0x10000000c9b82e34"
+    state: "present"
 
-    - name: Get details of an Initiator with initiator_name
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        initiator_name: "ansible_init"
-        state: "present"
+- name: Get details of an Initiator with initiator_name
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    initiator_name: "ansible_init"
+    state: "present"
 
-    - name: Rename a registered Initiator name with port_wwn
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        port_wwn: "0x10000000c9b82e34"
-        new_initiator_name: "ansibe_new_init"
-        state: "present"
+- name: Rename a registered Initiator name with port_wwn
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    port_wwn: "0x10000000c9b82e34"
+    new_initiator_name: "ansibe_new_init"
+    state: "present"
 
-    - name: Rename a registered Initiator name with initiator_name
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        initiator_name: "ansible_init"
-        new_initiator_name: "ansible_init_new"
-        state: "present"
+- name: Rename a registered Initiator name with initiator_name
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    initiator_name: "ansible_init"
+    new_initiator_name: "ansible_init_new"
+    state: "present"
 
-    - name: Unregister Initiator with port_wwn
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        port_wwn: "0x10000000c9b82e34"
-        registered: false
-        state: "present"
+- name: Unregister Initiator with port_wwn
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    port_wwn: "0x10000000c9b82e34"
+    registered: false
+    state: "present"
 
-    - name: Unregister Initiator with initiator_name
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        initiator_name: "ansible_init"
-        registered: false
-        state: "present"
+- name: Unregister Initiator with initiator_name
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    initiator_name: "ansible_init"
+    registered: false
+    state: "present"
 
-    - name: Rediscover Initiators
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        state: "present"
+- name: Rediscover Initiators
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    state: "present"
 
-    - name: Rediscover Initiators with timeout value set
-      dellemc_vplex_initiator:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        rediscover_timeout: "5"
-        state: "present"
+- name: Rediscover Initiators with timeout value set
+  dellemc_vplex_initiator:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    rediscover_timeout: "5"
+    state: "present"
 '''
 
 RETURN = r'''
@@ -313,12 +313,18 @@ class VplexInitiator():    # pylint:disable=R0902
         Get initiator port details
         """
         try:
-            initiator_details = self.initr.get_initiator_port(
-                self.cl_name, initiator_name)
-            LOG.info("Got initiator details %s from %s", initiator_name,
-                     self.cl_name)
-            LOG.debug("Initiator Details:\n%s", initiator_details)
-            return initiator_details
+            all_initiator_details = self.initr.get_initiator_ports(self.cl_name)
+            flag = False
+            if all_initiator_details:
+                for initiator in all_initiator_details:
+                    if initiator.name == initiator_name:
+                        flag = True
+                        break
+            if flag:
+                initiator_details = self.initr.get_initiator_port(self.cl_name, initiator_name)
+                LOG.info("Got initiator details %s from %s", initiator_name, self.cl_name)
+                LOG.debug("Initiator Details:\n%s", initiator_details)
+                return initiator_details
         except utils.ApiException as err:
             err_msg = ("Could not get initiator {0} from {1} due to"
                        " error: {2}".format(initiator_name, self.cl_name,

@@ -1,0 +1,9 @@
+ancestor: null
+releases:
+  1.3.0:
+    changes:
+      release_summary: This release adds enhancements to VPLEX module handling, including
+        improved storage view support and updated validations.
+    fragments:
+      - 1.3.0.yml
+    release_date: '2025-06-19'

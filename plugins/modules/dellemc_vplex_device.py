@@ -108,124 +108,124 @@ options:
   '''
 EXAMPLES = r'''
 
-    - name: Create a new raid-1 device
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        geometry: "raid-1"
-        device_name: "ansible_device_1"
-        extents: ["extent_1", "extent_2"]
-        extent_state: "present-in-device"
-        state: "present"
+- name: Create a new raid-1 device
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    geometry: "raid-1"
+    device_name: "ansible_device_1"
+    extents: ["extent_1", "extent_2"]
+    extent_state: "present-in-device"
+    state: "present"
 
-    - name: Create a new raid-0 device
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        geometry: "raid-0"
-        stripe_depth: "4KB"
-        device_name: "ansible_device_1"
-        extents: ["extent_1", "extent_2"]
-        extent_state: "present-in-device"
-        state: "present"
+- name: Create a new raid-0 device
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    geometry: "raid-0"
+    stripe_depth: "4KB"
+    device_name: "ansible_device_1"
+    extents: ["extent_1", "extent_2"]
+    extent_state: "present-in-device"
+    state: "present"
 
-    - name: Get device from cluster
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        device_name: "ansible_device_1"
-        state: "present"
+- name: Get device from cluster
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    device_name: "ansible_device_1"
+    state: "present"
 
-    - name: Delete device from cluster
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        device_name: "ansible_device_1"
-        state: "absent"
+- name: Delete device from cluster
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    device_name: "ansible_device_1"
+    state: "absent"
 
-    - name: Rename a local device
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        device_name: "ansible_device_1"
-        new_device_name: "new_device_name"
-        state: "present"
+- name: Rename a local device
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    device_name: "ansible_device_1"
+    new_device_name: "new_device_name"
+    state: "present"
 
-    - name: Update transfer_size of a local device
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        device_name: "ansible_device_1"
-        transfer_size: "40960"
-        state: "present"
+- name: Update transfer_size of a local device
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    device_name: "ansible_device_1"
+    transfer_size: "40960"
+    state: "present"
 
-    - name: Add extent to device
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        device_name: "ansible_device_1"
-        extents: ["extent_1", "extent_2"]
-        extent_state: "present-in-device"
-        state: "present"
+- name: Add extent to device
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    device_name: "ansible_device_1"
+    extents: ["extent_1", "extent_2"]
+    extent_state: "present-in-device"
+    state: "present"
 
-    - name: Remove extent from Device
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        device_name: "ansible_device_1"
-        extents: ["extent_1", "extent_2"]
-        extent_state: "absent-in-device"
-        state: "present"
+- name: Remove extent from Device
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    device_name: "ansible_device_1"
+    extents: ["extent_1", "extent_2"]
+    extent_state: "absent-in-device"
+    state: "present"
 
-    - name: Add mirror to device
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        device_name: "ansible_device_1"
-        target_cluster: "cluster-2"
-        mirror_name: "mirror_dev_1"
-        mirror_state: "present-in-device"
-        state: "present"
+- name: Add mirror to device
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    device_name: "ansible_device_1"
+    target_cluster: "cluster-2"
+    mirror_name: "mirror_dev_1"
+    mirror_state: "present-in-device"
+    state: "present"
 
-    - name: Remove mirror from device
-      dellemc_vplex_device:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        device_name: "ansible_device_1"
-        target_cluster: "cluster-2"
-        mirror_name: "mirror_dev_1"
-        mirror_state: "absent-in-device"
-        state: "present"
+- name: Remove mirror from device
+  dellemc_vplex_device:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    device_name: "ansible_device_1"
+    target_cluster: "cluster-2"
+    mirror_name: "mirror_dev_1"
+    mirror_state: "absent-in-device"
+    state: "present"
 '''
 
 RETURN = r'''
@@ -430,12 +430,19 @@ class VplexDevice():  # pylint: disable=R0902
         Get the details of a device.
         """
         try:
-            obj_device = self.device.get_device(cluster_name, device_name)
-            LOG.info("Got device details %s from %s", device_name,
-                     cluster_name)
-            LOG.debug("Device Details:\n%s", obj_device)
-            device_details = utils.serialize_content(obj_device)
-            return device_details
+            all_devices = self.device.get_devices(self.cl_name)
+            flag = False
+            if all_devices:
+                for device in all_devices:
+                    if device.name == device_name:
+                        flag = True
+                        break
+            if flag:
+                obj_device = self.device.get_device(cluster_name, device_name)
+                LOG.info("Got device details %s from %s", device_name, cluster_name)
+                LOG.debug("Device Details:\n%s", obj_device)
+                device_details = utils.serialize_content(obj_device)
+                return device_details
         except utils.ApiException as err:
             err_msg = ("Could not get device {0} of {1} due to"
                        " error: {2}".format(device_name, cluster_name,
@@ -493,6 +500,7 @@ class VplexDevice():  # pylint: disable=R0902
         """
 
         try:
+            LOG.error("Updating the local device")
             LOG.info("Final payload: %s", device_patch_payload)
             obj_device = self.device.patch_local_device(
                 cluster_name, device_name, device_patch_payload)
@@ -648,11 +656,20 @@ class VplexDevice():  # pylint: disable=R0902
         Get the distributed device details
         """
         try:
-            details = self.distdevice.get_distributed_device(device_name)
-            LOG.info("Got distributed device details %s", device_name)
-            LOG.debug("Distributed Device Details:\n%s", details)
-            dist_dev_details = utils.serialize_content(details)
-            return dist_dev_details
+            list_of_dis_devices = self.distdevice.get_distributed_devices()
+            flag = False
+            if list_of_dis_devices:
+                for dd in list_of_dis_devices:
+                    if dd.name == device_name:
+                        flag = True
+                        break
+            if flag:
+
+                details = self.distdevice.get_distributed_device(device_name)
+                LOG.info("Got distributed device details %s", device_name)
+                LOG.debug("Distributed Device Details:\n%s", details)
+                dist_dev_details = utils.serialize_content(details)
+                return dist_dev_details
         except utils.ApiException as err:
             err_msg = ("Could not get distributed device {0} due to"
                        " error: {1}".format(device_name,
@@ -723,7 +740,6 @@ class VplexDevice():  # pylint: disable=R0902
         Perform different actions on Device based on user parameters
         chosen in playbook
         """
-
         cluster_name = self.module.params['cluster_name']
         geometry = self.module.params['geometry']
         stripe_depth = self.module.params['stripe_depth']
@@ -736,7 +752,6 @@ class VplexDevice():  # pylint: disable=R0902
         mirror_state = self.module.params['mirror_state']
         target_cluster = self.module.params['target_cluster']
         transfer_size = self.module.params['transfer_size']
-
         changed = False
         result = dict(
             changed=False,
@@ -747,7 +762,6 @@ class VplexDevice():  # pylint: disable=R0902
         device_patch_payload = []
         distdev_patch_payload = []
         create_flag = False
-
         # Checking the validity of the device name
         self.check_task_validity(device_name, "device name")
         device_details = self.get_device(cluster_name, device_name)

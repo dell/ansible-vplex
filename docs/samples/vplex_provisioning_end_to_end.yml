@@ -20,8 +20,8 @@
     extent_list: []
     extent_list1: []
 
-  collections:
-    - dellemc.vplex
+      # collections:
+      # - dellemc.vplex
 
   tasks:
     - name: Rediscover StorageArray for local
@@ -66,9 +66,8 @@
       when: cluster_name_1 == cluster_name_2
 
     - name: Get the storage volumes names
-      set_fact:
-        stor_vol: "{{ volume_claimed_2['results'] | map(attribute=
-          'storage_details.name') | list }}"
+      ansible.builtin.set_fact:
+        stor_vol: "{{ volume_claimed_2['results'] | map(attribute='storage_details.name') | list }}"
       when: cluster_name_1 == cluster_name_2
 
     - name: Create extents
@@ -85,33 +84,32 @@
       when: cluster_name_1 == cluster_name_2
 
     - name: Get the extent names
-      set_fact:
-        extent: "{{ extent_det['results'] | map(attribute=
-          'extent_details.name') | list }}"
+      ansible.builtin.set_fact:
+        extent: "{{ extent_det['results'] | map(attribute='extent_details.name') | list }}"
       when: cluster_name_1 == cluster_name_2
 
-    - name: set_fact to split the even extents for device creation
-      set_fact:
+    - name: Set_fact to split the even extents for device creation
+      ansible.builtin.set_fact:
         extent_list: "{{ extent_list }} +
                       [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
-      loop: "{{ range(0, extent|length, 2) | list }}"
+      loop: "{{ range(0, extent | length, 2) | list }}"
       when:
         - cluster_name_1 == cluster_name_2
         - extent|length  % 2 == 0
 
-    - name: set_fact to split the odd extents for device creation
-      set_fact:
+    - name: Set_fact to split the odd extents for device creation
+      ansible.builtin.set_fact:
         extent_list1: "{{ extent_list1 }} +
                       [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
-      loop: "{{ range(0, extent|length - 1, 2) | list }}"
+      loop: "{{ range(0, extent | length - 1, 2) | list }}"
       when:
         - cluster_name_1 == cluster_name_2
         - extent|length  % 2 != 0
 
-    - name: set_fact to store last extent for odd extent
-      set_fact:
+    - name: Set_fact to store last extent for odd extent
+      ansible.builtin.set_fact:
         extent_list1: "{{ extent_list1 }} +[['{{ extent[item] }}']]"
-      loop: "{{ range(extent|length - 1,extent|length) | list }}"
+      loop: "{{ range(extent | length - 1, extent | length) | list }}"
       when:
         - cluster_name_1 == cluster_name_2
         - extent|length  % 2 != 0
@@ -135,9 +133,8 @@
       register: device_det
 
     - name: Get the even device names
-      set_fact:
-        device: "{{ device_det['results'] | map(attribute=
-          'device_details.name') | list }}"
+      ansible.builtin.set_fact:
+        device: "{{ device_det['results'] | map(attribute='device_details.name') | list }}"
       when:
         - cluster_name_1 == cluster_name_2
         - extent|length  % 2 == 0
@@ -161,9 +158,8 @@
       register: device_det1
 
     - name: Get the device names
-      set_fact:
-        device: "{{ device_det1['results'] | map(attribute=
-          'device_details.name') | list }}"
+      ansible.builtin.set_fact:
+        device: "{{ device_det1['results'] | map(attribute='device_details.name') | list }}"
       when:
         - cluster_name_1 == cluster_name_2
         - extent|length  % 2 != 0
@@ -197,13 +193,12 @@
       register: virt_vol
 
     - name: Get the virtual volume names
-      set_fact:
-        virtual_volumes: "{{ virt_vol['results'] | map(attribute=
-          'storage_details.name') | list }}"
+      ansible.builtin.set_fact:
+        virtual_volumes: "{{ virt_vol['results'] | map(attribute='storage_details.name') | list }}"
       when: cluster_name_1 == cluster_name_2
 
     - name: Create raid-1 device on VPLEX setup
-      include_role:
+      ansible.builtin.include_role:
         name: createdevice
       vars:
         cluster_name: "{{ cluster_name_1 }}"
@@ -211,13 +206,18 @@
       when: cluster_name_1 != cluster_name_2
 
     - name: Get the device name list from first cluster
-      set_fact:
-        dev1: "{{ get_device['results'] | map(attribute=
-          'device_details.name') | list }}"
+      ansible.builtin.set_fact:
+        dev1: "{{ get_device['results'] | map(attribute='device_details.name') | list }}"
       when: cluster_name_1 != cluster_name_2
 
+    - name: Log device names from first cluster
+      ansible.builtin.debug:
+        var: dev1
+      when: cluster_name_1 != cluster_name_2
+
+
     - name: Create raid-1 device on VPLEX setup
-      include_role:
+      ansible.builtin.include_role:
         name: createdevice
       vars:
         cluster_name: "{{ cluster_name_2 }}"
@@ -225,14 +225,18 @@
       when: cluster_name_1 != cluster_name_2
 
     - name: Get the device name list from second cluster
-      set_fact:
-        dev2: "{{ get_device['results'] | map(attribute=
-          'device_details.name') | list }}"
+      ansible.builtin.set_fact:
+        dev2: "{{ get_device['results'] | map(attribute='device_details.name') | list }}"
+      when: cluster_name_1 != cluster_name_2
+    
+    - name: Log device names from first cluster
+      ansible.builtin.debug:
+        var: dev2
       when: cluster_name_1 != cluster_name_2
 
     - name: Set index_name var
-      set_fact:
-        index_name: "{{ range(0, dev2|length) | list }}"
+      ansible.builtin.set_fact:
+        index_name: "{{ range(0, dev2 | length) | list }}"
       when: cluster_name_1 != cluster_name_2
 
     - name: Create distributed device on VPLEX setup
@@ -254,9 +258,8 @@
       when: cluster_name_1 != cluster_name_2
 
     - name: Get the distributed device names
-      set_fact:
-        dd_dev: "{{ create_dd['results'] | map(attribute=
-          'dist_device_details.name') | list }}"
+      ansible.builtin.set_fact:
+        dd_dev: "{{ create_dd['results'] | map(attribute='dist_device_details.name') | list }}"
       when: cluster_name_1 != cluster_name_2
 
     - name: Get device details
@@ -286,9 +289,8 @@
       when: cluster_name_1 != cluster_name_2
 
     - name: Get the distributed virtual volume names
-      set_fact:
-        dist_virt_vols: "{{ create_dvv['results'] | map(attribute=
-          'dist_vv_details.name') | list }}"
+      ansible.builtin.set_fact:
+        dist_virt_vols: "{{ create_dvv['results'] | map(attribute='dist_vv_details.name') | list }}"
       when: cluster_name_1 != cluster_name_2
 
     - name: Register initiator
