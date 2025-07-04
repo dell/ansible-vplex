@@ -48,25 +48,24 @@ options:
 
   '''
 EXAMPLES = r'''
-    - name: Rediscover StorageArray
-      dellemc_vplex_array:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        array_name: "EMC-SYMMETRIX-197200581"
-        rediscover: true
+- name: Rediscover StorageArray
+  dellemc_vplex_array:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    array_name: "EMC-SYMMETRIX-197200581"
+    rediscover: true
 
-    - name: Get StorageArray
-      dellemc_vplex_array:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        array_name: "EMC-SYMMETRIX-197200581"
-
+- name: Get StorageArray
+  dellemc_vplex_array:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    array_name: "EMC-SYMMETRIX-197200581"
 '''
 
 RETURN = r'''

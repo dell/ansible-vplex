@@ -16,8 +16,8 @@
       verifycert: "{{ verifycert }}"
       cluster_name: "{{ cluster_name }}"
 
-  collections:
-    - dellemc.vplex
+  # collections:
+  #   - dellemc.vplex
 
   tasks:
     - name: Get list of all storage volumes in a given cluster
@@ -31,5 +31,6 @@
             filter_value: "unclaimed"
       register: volumes
 
-    - debug:
+    - name: Display unclaimed storage volumes
+      ansible.builtin.debug:
         var: volumes

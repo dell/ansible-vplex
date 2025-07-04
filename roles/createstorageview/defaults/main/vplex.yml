@@ -1,2 +1,2 @@
 ---
-cluster_name: 'cluster-name'
+createstorageview_cluster_name: 'cluster-name'

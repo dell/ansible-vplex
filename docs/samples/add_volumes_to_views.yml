@@ -21,8 +21,8 @@
     extent_list: []
     extent_list1: []
 
-  collections:
-    - dellemc.vplex
+      # collections:
+      # - dellemc.vplex
 
   tasks:
     # This task returns the list of storage volumes that are unclaimed
@@ -54,7 +54,7 @@
       register: volumes
 
     - name: Get the storage volumes names
-      set_fact:
+      ansible.builtin.set_fact:
         stor_vol: "{{ volumes['results'] | map(attribute=
           'storage_details.name') | list }}"
 
@@ -70,27 +70,25 @@
       register: extent_det
 
     - name: Get the extent names
-      set_fact:
+      ansible.builtin.set_fact:
         extent: "{{ extent_det['results'] | map(attribute=
           'extent_details.name') | list }}"
 
-    - name: set_fact to split the even extents for device creation
-      set_fact:
-        extent_list: "{{ extent_list }} +
-                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+    - name: Set_fact to split the even extents for device creation
+      ansible.builtin.set_fact:
+        extent_list: "{{ extent_list + [[extent[item], extent[item + 1]]] }}"
       loop: "{{ range(0, extent|length, 2) | list }}"
       when: extent|length % 2 == 0
 
-    - name: set_fact to split the odd extents for device creation
-      set_fact:
-        extent_list1: "{{ extent_list1 }} +
-                      [['{{ extent[item] }}', '{{ extent[item + 1] }}']]"
+    - name: Set_fact to split the odd extents for device creation
+      ansible.builtin.set_fact:
+        extent_list1: "{{ extent_list1 + [[extent[item], extent[item + 1]]] }}"
       loop: "{{ range(0, extent|length - 1, 2) | list }}"
       when: extent|length % 2 != 0
 
-    - name: set_fact to store last extent for odd extent
-      set_fact:
-        extent_list1: "{{ extent_list1 }} +[['{{ extent[item] }}']]"
+    - name: Set_fact to store last extent for odd extent
+      ansible.builtin.set_fact:
+        extent_list1: "{{ extent_list1 + [[extent[item]]] }}"
       loop: "{{ range(extent|length - 1,extent|length) | list }}"
       when: extent|length % 2 != 0
 
@@ -110,7 +108,7 @@
       register: device_det
 
     - name: Get the even device names
-      set_fact:
+      ansible.builtin.set_fact:
         device: "{{ device_det['results'] | map(attribute=
           'device_details.name') | list }}"
       when: extent|length % 2 == 0
@@ -131,7 +129,7 @@
       register: device_det
 
     - name: Get the odd device names
-      set_fact:
+      ansible.builtin.set_fact:
         device: "{{ device_det['results'] | map(attribute=
           'device_details.name') | list }}"
       when: extent|length  % 2 != 0
@@ -161,7 +159,7 @@
       register: virt_vol
 
     - name: Get the virtual volume names
-      set_fact:
+      ansible.builtin.set_fact:
         virtual_volumes: "{{ virt_vol['results'] | map(attribute=
           'storage_details.name') | list }}"
 
@@ -178,7 +176,7 @@
       register: initiator
 
     - name: Set n1
-      set_fact:
+      ansible.builtin.set_fact:
         n1: "{{ (virtual_volumes|length / 2) | int }}"
 
     - name: Create storage view sv1 and add virtual volumes

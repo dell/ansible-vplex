@@ -1,9 +1,9 @@
 ---
-init_1_name: 'ansible-init1'
-init_1_wwn: 'initiator port-wwn 1'
-init_2_name: 'ansible-init2'
-init_2_wwn: 'initiator port-wwn 2'
+createstorageview_init_1_name: 'ansible-init1'
+createstorageview_init_1_wwn: 'initiator port-wwn 1'
+createstorageview_init_2_name: 'ansible-init2'
+createstorageview_init_2_wwn: 'initiator port-wwn 2'
 
-feports: ['list of front-end VPLEX ports']
+createstorageview_feports: ['list of front-end VPLEX ports']
 
-storageview_name: 'storage view name'
+createstorageview_storageview_name: 'storage view name'

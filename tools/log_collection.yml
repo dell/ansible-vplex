@@ -12,8 +12,8 @@
     cluster_name: "cluster-1"
     extent_name: "ansible_ext_1"
 
-  collections:
-    - dellemc.vplex
+  # collections:
+  #   - dellemc.vplex
 
   tasks:
     # This task gets the extent details
@@ -31,16 +31,20 @@
           register: device_out
 
         # Displays the extent details
-        - debug:
+        - name: Create_dr_cg
+          ansible.builtin.debug:
             var: device_out
 
       rescue:
         - name: Execute VPlex log collection script
-          command: |
+          ansible.builtin.command: |
             python vplexlog_collection.py "{{ vplexhost }}" "{{ vplexuser }}"
             "{{ vplexpassword }}"
+          changed_when: false
           register: stdout
 
         # Displays the script output
-        - debug:
+
+        - name: Create_dr_cg
+          ansible.builtin.debug:
             var: stdout

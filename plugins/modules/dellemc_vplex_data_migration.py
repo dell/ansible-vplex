@@ -87,196 +87,195 @@ options:
   '''
 EXAMPLES = r'''
 
-    - name: Create a device migration job across cluster
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        target_cluster: "cluster-2"
-        storage: "device"
-        source_name: "source_dev_1"
-        target_name: "target_dev_1"
-        migration_name: "mobility_job"
-        state: "present"
+- name: Create a device migration job across cluster
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    target_cluster: "cluster-2"
+    storage: "device"
+    source_name: "source_dev_1"
+    target_name: "target_dev_1"
+    migration_name: "mobility_job"
+    state: "present"
 
-    - name: Create a device migration job within cluster
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage: "device"
-        source_name: "source_dev_1"
-        target_name: "target_dev_1"
-        migration_name: "mobility_job"
-        state: "present"
+- name: Create a device migration job within cluster
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage: "device"
+    source_name: "source_dev_1"
+    target_name: "target_dev_1"
+    migration_name: "mobility_job"
+    state: "present"
 
-    - name: Get a device migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "device"
-        state: "present"
+- name: Get a device migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "device"
+    state: "present"
 
-    - name: Update transfer size of a device migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "device"
-        transfer_size: 40960
-        state: "present"
+- name: Update transfer size of a device migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "device"
+    transfer_size: 40960
+    state: "present"
 
-    - name: Pause a device migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "device"
-        status: "pause"
-        state: "present"
+- name: Pause a device migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "device"
+    status: "pause"
+    state: "present"
 
-    - name: Resume a device migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "device"
-        status: "resume"
-        state: "present"
+- name: Resume a device migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "device"
+    status: "resume"
+    state: "present"
 
-    - name: Cancel a device migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "device"
-        status: "cancel"
-        state: "present"
+- name: Cancel a device migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "device"
+    status: "cancel"
+    state: "present"
 
-    - name: Commit a device migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "device"
-        status: "commit"
-        state: "present"
+- name: Commit a device migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "device"
+    status: "commit"
+    state: "present"
 
-    - name: Delete a device migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "device"
-        state: "absent"
+- name: Delete a device migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "device"
+    state: "absent"
 
-    - name: Create an extent migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        cluster_name: "cluster-1"
-        storage: "extent"
-        source_name: "source_ext_1"
-        target_name: "target_ext_1"
-        migration_name: "mobility_job"
-        state: "present"
+- name: Create an extent migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    cluster_name: "cluster-1"
+    storage: "extent"
+    source_name: "source_ext_1"
+    target_name: "target_ext_1"
+    migration_name: "mobility_job"
+    state: "present"
 
-    - name: Get an extent migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        storage: "extent"
-        migration_name: "mobility_job"
-        state: "present"
+- name: Get an extent migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    storage: "extent"
+    migration_name: "mobility_job"
+    state: "present"
 
-    - name: Update transfer size of an extent migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "extent"
-        transfer_size: 40960
-        state: "present"
+- name: Update transfer size of an extent migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "extent"
+    transfer_size: 40960
+    state: "present"
 
-    - name: Pause an extent migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "extent"
-        status: "pause"
-        state: "present"
+- name: Pause an extent migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "extent"
+    status: "pause"
+    state: "present"
 
-    - name: Resume an extent migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "extent"
-        status: "resume"
-        state: "present"
+- name: Resume an extent migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "extent"
+    status: "resume"
+    state: "present"
 
-    - name: Commit an extent migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "extent"
-        status: "commit"
-        state: "present"
+- name: Commit an extent migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "extent"
+    status: "commit"
+    state: "present"
 
-    - name: Cancel an extent migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "extent"
-        status: "cancel"
-        state: "present"
+- name: Cancel an extent migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "extent"
+    status: "cancel"
+    state: "present"
 
-    - name: Delete an extent migration job
-      dellemc_vplex_data_migration:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        verifycert: "{{ verifycert }}"
-        migration_name: "mobility_job"
-        storage: "extent"
-        state: "absent"
-
+- name: Delete an extent migration job
+  dellemc_vplex_data_migration:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    verifycert: "{{ verifycert }}"
+    migration_name: "mobility_job"
+    storage: "extent"
+    state: "absent"
 '''
 
 RETURN = r'''

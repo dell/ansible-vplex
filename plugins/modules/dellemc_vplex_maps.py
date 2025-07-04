@@ -110,7 +110,6 @@ EXAMPLES = r'''
     cluster_name: "cluster-1"
     entity_type: 'storage_volumes'
     entity_name: 'ansible_strg_vol'
-
 '''
 
 RETURN = r'''

@@ -1,7 +1,7 @@
 ---
 # tasks file for createstorageview
 - name: Set the variables for create storage view task
-  set_fact:
+  ansible.builtin.set_fact:
     input: &conn_vars
       vplexhost: "{{ vplexhost }}"
       vplexuser: "{{ vplexuser }}"
@@ -12,36 +12,36 @@
   collections:
     - dellemc.vplex
 
-- name: "Register Initiator {{ init_1_name }} with port_wwn {{ init_1_wwn }}"
+- name: "Register Initiator with port_wwn {{createstorageview_init_1_wwn }}"
   dellemc_vplex_initiator:
     <<: *conn_vars
-    initiator_name: "{{ init_1_name }}"
-    port_wwn: "{{ init_1_wwn }}"
+    initiator_name: "{{ createstorageview_init_1_name }}"
+    port_wwn: "{{ createstorageview_init_1_wwn }}"
     registered: true
     state: "present"
 
-- name: "Register Initiator {{ init_2_name }} with port_wwn {{ init_2_wwn }}"
+- name: "Register Initiator with port_wwn {{ createstorageview_init_2_wwn }}"
   dellemc_vplex_initiator:
     <<: *conn_vars
-    initiator_name: "{{ init_2_name }}"
-    port_wwn: "{{ init_2_wwn }}"
+    initiator_name: "{{ createstorageview_init_2_name }}"
+    port_wwn: "{{ createstorageview_init_2_wwn }}"
     registered: true
     state: "present"
 
 - name: Set target port variable
-  set_fact:
-    target_port: "{{ feports[0] }}"
+  ansible.builtin.set_fact:
+    createstorageview_target_port: "{{ createstorageview_feports[0] }}"
 
 - name: Create a storage view and add initiators
   dellemc_vplex_storage_view:
     <<: *conn_vars
-    storage_view_name: "{{ storageview_name }}"
-    ports: "{{ feports }}"
-    initiators: ["{{ init_1_name }}", "{{ init_2_name }}"]
+    storage_view_name: "{{ createstorageview_storageview_name }}"
+    ports: "{{ createstorageview_feports }}"
+    initiators: ["{{ createstorageview_init_1_name }}", "{{ createstorageview_init_2_name }}"]
     initiator_state: "present-in-view"
     virtual_volumes: ["{{ item }}"]
     virtual_volume_state: "present-in-view"
     state: "present"
   with_items:
-    - "{{ dist_virtual_volume }}"
+    - "{{ createstorageview_dist_virtual_volume }}"
   register: storage_view

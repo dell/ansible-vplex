@@ -1,15 +1,16 @@
 ---
 # tasks file for createdevice
 - name: Set the variables for the create device task
-  set_fact:
+  ansible.legacy.set_fact:
     input: &conn_vars
       vplexhost: "{{ vplexhost }}"
       vplexuser: "{{ vplexuser }}"
       vplexpassword: "{{ vplexpassword }}"
       verifycert: "{{ verifycert }}"
-      cluster_name: "{{ cluster_name }}"
+      cluster_name: "{{ createdevice_cluster_name }}"
     n: "{{ no_stor_vol }}"
     vname: "{{ ansible_date_time.epoch }}"
+    array_name: "{{ createdevice_array_name }}"
     extent_list: []
     extent_list1: []
 
@@ -28,12 +29,16 @@
         filter_value: "unclaimed"
       - filter_key: "capacity"
         filter_operator: "lesser"
-        filter_value: "10GB"
+        filter_value: "20GB"
       - filter_key: "storage_array_name"
         filter_operator: "equal"
         filter_value: "{{ array_name }}"
 
   register: volume
+
+- name: Log gathered volume information
+  ansible.legacy.debug:
+    var: volume
 
 - name: Claim first Storage Volumes
   dellemc_vplex_storage_volume:
@@ -47,20 +52,25 @@
     index_var: index
   register: volume_claimed_2
 
+- name: Log claimed volume information
+  ansible.legacy.debug:
+    var: volume_claimed_2
+
 - name: Get the storage volumes names
-  set_fact:
+  ansible.legacy.set_fact:
     stor_vol: "{{ volume_claimed_2['results'] | map(attribute=
           'storage_details.name') | list }}"
 
 - name: Log stor_vol set_fact data
-  debug:
+  ansible.legacy.debug:
     var: stor_vol
 
 - name: Create extents
   dellemc_vplex_extent:
     <<: *conn_vars
+    cluster_name: "{{ createdevice_cluster_name }}"
     storage_volume_name: "{{ item }}"
-    extent_name: "extent_ps_{{ cluster_name }}_{{ index }}"
+    extent_name: "extent_ps_{{ createdevice_cluster_name }}_{{ index }}"
     state: "present"
   loop: "{{ stor_vol }}"
   loop_control:
@@ -68,7 +78,7 @@
   register: extent_det
 
 - name: Log extent details
-  debug:
+  ansible.legacy.debug:
     var: extent_det
 
 - name: Get the extent names
@@ -76,36 +86,36 @@
     extent: "{{ extent_det['results'] | map(attribute=
           'extent_details.name') | list }}"
 
-- name: set_fact to split the even extents for device creation
-  set_fact:
+- name: Set_fact to split the even extents for device creation
+  ansible.builtin.set_fact:
     extent_list: "{{ extent_list + [[extent[item], extent[item + 1]]] }}"
   loop: "{{ range(0, extent|length, 2) | list }}"
   when: extent|length  % 2 == 0
 
 - name: Log extent_list after splitting even extents
-  debug:
+  ansible.legacy.debug:
     var: extent_list
   when: extent|length  % 2 == 0
 
-- name: set_fact to split the odd extents for device creation
-  set_fact:
+- name: Set_fact to split the odd extents for device creation
+  ansible.legacy.set_fact:
     extent_list1: "{{ extent_list1 + [[extent[item], extent[item + 1]]] }}"
   loop: "{{ range(0, extent|length - 1, 2) | list }}"
   when: extent|length  % 2 != 0
 
 - name: Log extent_list1 after splitting odd extents
-  debug:
+  ansible.legacy.debug:
     var: extent_list1
   when: extent|length  % 2 != 0
 
-- name: set_fact to store last extent for odd extent
-  set_fact:
-    extent_list1: "{{ extent_list1 + [[extent[item]]] }}"
+- name: Set_fact to store last extent for odd extent
+  ansible.legacy.set_fact:
+    extent_list1: "{{ extent_list + [[extent[item]]] }}"
   loop: "{{ range(extent|length - 1,extent|length) | list }}"
   when: extent|length  % 2 != 0
 
 - name: Log extent_list1 after storing last odd extent
-  debug:
+  ansible.legacy.debug:
     var: extent_list1
   when: extent|length  % 2 != 0
 
@@ -125,14 +135,14 @@
   register: device_det
 
 - name: Get the even device names
-  set_fact:
+  ansible.legacy.set_fact:
     device: "{{ device_det['results'] | map(attribute=
           'device_details.name') | list }}"
   when: extent|length  % 2 == 0
 
 - name: Debug device_det results
-  debug:
-    var: device_det.results    
+  ansible.legacy.debug:
+    var: device_det.results
 
 - name: Create devices odd
   dellemc_vplex_device:
@@ -150,7 +160,7 @@
   register: device_det1
 
 - name: Get the device names
-  set_fact:
+  ansible.legacy.set_fact:
     device: "{{ device_det1['results'] | map(attribute=
           'device_details.name') | list }}"
   when: extent|length  % 2 != 0
@@ -167,4 +177,3 @@
   loop: "{{ device }}"
   loop_control:
     label: "{{ item }}"
-    

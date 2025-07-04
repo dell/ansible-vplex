@@ -14,8 +14,8 @@
       verifycert: "{{ verifycert }}"
       cluster_name: "{{ cluster_name }}"
 
-  collections:
-    - dellemc.vplex
+  # collections:
+  #   - dellemc.vplex
 
   tasks:
     - name: Get the storage volumes of size 80G or greater
@@ -30,5 +30,6 @@
       register: volume
 
     # List the storage volume names present in the cluster
-    - debug:
+    - name: Display storage volumes present in the cluster
+      ansible.builtin.debug:
         var: volume
