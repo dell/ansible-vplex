@@ -9,42 +9,42 @@
     - vars/volume_name.yml
 
   vars:
-    Vplexinput: &connection_vars
+    vplex_input: &connection_vars
       vplexhost: "{{ vplexhost }}"
       vplexuser: "{{ vplexuser }}"
       vplexpassword: "{{ vplexpassword }}"
       verifycert: false
 
-  collections:
-    - dellemc.vplex
+  # collections:
+  #   - dellemc.vplex
 
   tasks:
-    - name: Create raid-1 device on VPLEX setup
-      include_role:
+    - name: Create raid-1 device on VPLEX setup cluster-1
+      ansible.builtin.include_role:
         name: createdevice
       vars:
-        cluster_name: "{{ cluster_name_1 }}"
-        array_name: "{{ array_name_1 }}"
+        createdevice_cluster_name: "{{ cluster_name_1 }}"
+        createdevice_array_name: "{{ array_name_1 }}"
 
     - name: Get the device name list from first cluster
-      set_fact:
+      ansible.builtin.set_fact:
         dev1: "{{ get_device['results'] | map(attribute=
           'device_details.name') | list }}"
 
-    - name: Create raid-1 device on VPLEX setup
-      include_role:
+    - name: Create raid-1 device on VPLEX setup cluster-2
+      ansible.builtin.include_role:
         name: createdevice
       vars:
-        cluster_name: "{{ cluster_name_2 }}"
-        array_name: "{{ array_name_2 }}"
+        createdevice_cluster_name: "{{ cluster_name_2 }}"
+        createdevice_array_name: "{{ array_name_2 }}"
 
     - name: Get the device name list from second cluster
-      set_fact:
+      ansible.builtin.set_fact:
         dev2: "{{ get_device['results'] | map(attribute=
           'device_details.name') | list }}"
 
     - name: Set index_name var
-      set_fact:
+      ansible.builtin.set_fact:
         index_name: "{{ range(0, dev2|length) | list }}"
 
     - name: Create distributed device on VPLEX setup
@@ -65,7 +65,7 @@
         - "{{ index_name }}"
 
     - name: Get the distributed device names
-      set_fact:
+      ansible.builtin.set_fact:
         dd_dev: "{{ create_dd['results'] | map(attribute=
           'dist_device_details.name') | list }}"
 
@@ -94,17 +94,18 @@
       register: create_dvv
 
     - name: Get the distributed virtual volume names
-      set_fact:
+      ansible.builtin.set_fact:
         dist_virt_vols: "{{ create_dvv['results'] | map(attribute=
           'dist_vv_details.name') | list }}"
 
     - name: Create new storage view
-      include_role:
+      ansible.builtin.include_role:
         name: createstorageview
       vars:
-        dist_virtual_volume: "{{ item }}"
+        createstorageview_dist_virtual_volume: "{{ item }}"
       with_items:
         - "{{ dist_virt_vols  }}"
 
-    - name: Print storage view details
-      debug: var=storage_view
+    - name: Debug storage view details
+      ansible.builtin.debug:
+        var: storage_view

@@ -101,7 +101,7 @@ def collect_logs(log):  # pylint:disable=R0915,R0914,R0912
     with open(log + "/system_info.log", 'w') as logfile:
         logfile.write("Host System Information\n")
         logfile.write("***********************\n")
-        if re.search(r"^3\.", line.split(" ")[0]):
+        if re.search(r"^3\.", line.split(" ", maxsplit=1)[0]):
             stdout = subprocess.check_output(["ansible", "--version"])
             logfile.write("Ansible Details:\n----------------\n{0}\n"
                           .format(stdout.decode('utf-8')))
@@ -115,7 +115,7 @@ def collect_logs(log):  # pylint:disable=R0915,R0914,R0912
                 logfile.write("{0} : {1}\n"
                               .format(attr, eval(  # pylint:disable=W0123
                                   "uname.%s" % (attr))))
-        elif re.search(r"^2\.", line.split(" ")[0]):
+        elif re.search(r"^2\.", line.split(" ", maxsplit=1)[0]):
             stdout = subprocess.check_output(["ansible", "--version"])
             logfile.write("Ansible Details:\n----------------\n{0}\n"
                           .format(stdout))

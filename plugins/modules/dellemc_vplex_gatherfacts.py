@@ -33,6 +33,7 @@ options:
     description:
     - Name of the cluster
     type: str
+    default: ""
 
   gather_subset:
     description:
@@ -255,7 +256,6 @@ EXAMPLES = r'''
     verifycert: "{{ verifycert }}"
     gather_subset:
       - extent_mig_job
-
 '''
 
 RETURN = r'''
@@ -503,7 +503,7 @@ class VplexGatherFacts():  # pylint: disable=R0904
             if filters_dict:
                 obj = clusters.get_clusters(**filters_dict)
             else:
-                obj = clusters.get_clusters(fields=utils.get_cluster_desired_fields())
+                obj = clusters.get_clusters()
             self.logmsg('cluster', obj)
             return obj
         except (utils.ApiException, ValueError, TypeError) as err:
@@ -515,6 +515,7 @@ class VplexGatherFacts():  # pylint: disable=R0904
     def get_storage_array_list(self, cluster_name=None, filters_dict=None):
         """Get the list of storage arrays on a specific cluster in VPLEX"""
         try:
+            LOG.error("Getting storage array")
             storage_array = utils.StorageArrayApi(
                 api_client=self.client)
             if filters_dict:
@@ -524,6 +525,8 @@ class VplexGatherFacts():  # pylint: disable=R0904
                 obj = storage_array.get_storage_arrays(cluster_name)
             self.logmsg('Storage Array', obj, cluster_name)
             array_details = utils.serialize_content(obj)
+            LOG.error("array_details")
+            LOG.error(array_details)
             return self.parse_data(array_details)
         except (utils.ApiException, ValueError, TypeError) as err:
             err_msg = "Could not get Storage Arrays from {0} due to"
@@ -903,6 +906,8 @@ class VplexGatherFacts():  # pylint: disable=R0904
                     parsed_list.append(dict({'name': item['name']}))
             else:
                 parsed_list.append(item['name'])
+        LOG.error("Parsed list data")
+        LOG.error(parsed_list)
         return parsed_list
 
     def perform_module_operation(self):    # pylint: disable=R0914,R0912,R0915
@@ -1044,7 +1049,7 @@ def get_vplex_gatherfacts_parameters():
                                     ]),
         filters=dict(type='list', required=False, elements='dict',
                      options=dict(
-                         filter_key=dict(type='str', required=True),
+                         filter_key=dict(type='str', required=True, no_log=True),
                          filter_operator=dict(type='str', required=True,
                                               choices=['equal', 'greater',
                                                        'lesser',

@@ -55,35 +55,34 @@ options:
 '''
 
 EXAMPLES = r'''
-    - name: Get Port
-      dellemc_vplex_port:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "cluster-1"
-        port_name: "P0000000046E0124B-A0-FC02"
-        state: "present"
+- name: Get Port
+  dellemc_vplex_port:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    cluster_name: "cluster-1"
+    port_name: "P0000000046E0124B-A0-FC02"
+    state: "present"
 
-    - name: Enable Port
-      dellemc_vplex_port:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{ vplexpassword }}"
-        cluster_name: "cluster-1"
-        port_name: "P0000000046E0124B-A0-FC02"
-        enabled: true
-        state: "present"
+- name: Enable Port
+  dellemc_vplex_port:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{ vplexpassword }}"
+    cluster_name: "cluster-1"
+    port_name: "P0000000046E0124B-A0-FC02"
+    enabled: true
+    state: "present"
 
-    - name: Disable Port
-      dellemc_vplex_port:
-        vplexhost: "{{ vplexhost }}"
-        vplexuser: "{{ vplexuser }}"
-        vplexpassword: "{{vplexpassword }}"
-        cluster_name: "cluster-1"
-        port_name: "P0000000046E0124B-A0-FC02"
-        enabled: false
-        state: "present"
-
+- name: Disable Port
+  dellemc_vplex_port:
+    vplexhost: "{{ vplexhost }}"
+    vplexuser: "{{ vplexuser }}"
+    vplexpassword: "{{vplexpassword }}"
+    cluster_name: "cluster-1"
+    port_name: "P0000000046E0124B-A0-FC02"
+    enabled: false
+    state: "present"
 '''
 
 RETURN = r'''

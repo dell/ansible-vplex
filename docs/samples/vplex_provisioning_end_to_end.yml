@@ -164,7 +164,7 @@
         - cluster_name_1 == cluster_name_2
         - extent|length  % 2 != 0
 
-    - name: Get device details
+    - name: Get device details from cluster-1
       dellemc_vplex_device:
         <<: *connection_vars
         cluster_name: "{{ cluster_name_1 }}"
@@ -197,12 +197,12 @@
         virtual_volumes: "{{ virt_vol['results'] | map(attribute='storage_details.name') | list }}"
       when: cluster_name_1 == cluster_name_2
 
-    - name: Create raid-1 device on VPLEX setup
+    - name: Create raid-1 device on VPLEX setup cluster-1
       ansible.builtin.include_role:
         name: createdevice
       vars:
-        cluster_name: "{{ cluster_name_1 }}"
-        array_name: "{{ array_name_1 }}"
+        createdevice_cluster_name: "{{ cluster_name_1 }}"
+        createdevice_array_name: "{{ array_name_1 }}"
       when: cluster_name_1 != cluster_name_2
 
     - name: Get the device name list from first cluster
@@ -216,20 +216,20 @@
       when: cluster_name_1 != cluster_name_2
 
 
-    - name: Create raid-1 device on VPLEX setup
+    - name: Create raid-1 device on VPLEX setup cluster-2
       ansible.builtin.include_role:
         name: createdevice
       vars:
-        cluster_name: "{{ cluster_name_2 }}"
-        array_name: "{{ array_name_2 }}"
+        createdevice_cluster_name: "{{ cluster_name_2 }}"
+        createdevice_array_name: "{{ array_name_2 }}"
       when: cluster_name_1 != cluster_name_2
 
     - name: Get the device name list from second cluster
       ansible.builtin.set_fact:
         dev2: "{{ get_device['results'] | map(attribute='device_details.name') | list }}"
       when: cluster_name_1 != cluster_name_2
-    
-    - name: Log device names from first cluster
+
+    - name: Log device names from second cluster
       ansible.builtin.debug:
         var: dev2
       when: cluster_name_1 != cluster_name_2
