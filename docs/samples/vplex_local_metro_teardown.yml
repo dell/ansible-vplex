@@ -44,14 +44,14 @@
 
     - name: Set teardown_property
       ansible.builtin.set_fact:
-        teardown_property: "{{ teardown_property   + [item.split('/')[-3]] }}"
+        teardown_property: "{{ teardown_property + [item.split('/')[-3]] }}"
       loop: "{{ virtual_names }}"
 
     - name: Distributed volumes
       ansible.builtin.set_fact:
         dist_vv: "{{ dist_vv + [item.0.split('/')[-1]] }}"
       with_together:
-        - "{{ virtual_names[0:virtual_names|length] }}"
+        - "{{ virtual_names[0 : virtual_names | length] }}"
         - "{{ teardown_property }}"
       when: item.1 == "distributed_storage"
 
@@ -59,7 +59,7 @@
       ansible.builtin.set_fact:
         local_vv: "{{ local_vv + [item.0.split('/')[-1]] }}"
       with_together:
-        - "{{ virtual_names[0:virtual_names|length] }}"
+        - "{{ virtual_names[0 : virtual_names | length] }}"
         - "{{ teardown_property }}"
       when: item.1 != "distributed_storage"
 
@@ -81,8 +81,10 @@
 
     - name: Fetch the distributed devices
       ansible.builtin.set_fact:
-        dd_device: "{{ dd_virt_det['results'] | map(attribute=
-          'dist_vv_details.supporting_device') | list }}"
+        dd_device: >-
+          {{ dd_virt_det.results
+             | map(attribute='dist_vv_details.supporting_device')
+             | list }}
 
     - name: Get details of the distributed device
       dellemc_vplex_distributed_device:
@@ -94,8 +96,10 @@
 
     - name: Fetch the source and target devices
       ansible.builtin.set_fact:
-        dev_list: "{{ device_det['results'] | map(attribute=
-          'dist_device_details.devices') | list }}"
+        dev_list: >-
+          {{ device_det['results']
+             | map(attribute='dist_device_details.devices')
+             | list }}
 
     - name: Combine the source and target devices into a single list
       ansible.builtin.set_fact:
@@ -139,8 +143,12 @@
 
     - name: Fetch the supporting devices
       ansible.builtin.set_fact:
-        device_list: "{{ virt_det['results'] | map(attribute=
-          'storage_details.supporting_device') | list }}"
+        device_list: >-
+          {{
+            virt_det['results']
+            | map(attribute='storage_details.supporting_device')
+            | list
+          }}
 
     - name: Get the device name
       ansible.builtin.set_fact:
@@ -167,18 +175,22 @@
 
     - name: Get map details
       ansible.builtin.set_fact:
-        ext_det: "{{ dev_map.results | map(attribute=
-          'map_details') | flatten }}"
+        ext_det: >-
+          {{
+            dev_map.results
+            | map(attribute='map_details')
+            | flatten
+          }}
 
     - name: Get extent details
       ansible.builtin.set_fact:
-        ext: "{{ ext +  [item.split(':')[-1]] | map('trim') | list }}"
+        ext: "{{ (ext + [item.split(':')[-1]]) | map('trim') | list }}"
       loop: "{{ ext_det }}"
       when: item is search('extents')
 
     - name: Get storage volume details
       ansible.builtin.set_fact:
-        sv: "{{ sv +  [item.split(':')[-1]] | map('trim') | list }}"
+        sv: "{{ sv + [item.split(':')[-1]] | map('trim') | list }}"
       loop: "{{ ext_det }}"
       when: item is search("storage_volumes")
 

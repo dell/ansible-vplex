@@ -29,13 +29,13 @@
 
 - name: Get extent details
   ansible.builtin.set_fact:
-    ext1: "{{ ext1 +  [item.split(':')[-1]] | map('trim') | list }}"
+    ext1: "{{ ext1 + [item.split(':')[-1]] | map('trim') | list }}"
   loop: "{{ ext_det1 }}"
   when: item is search("extents")
 
 - name: Get storage volume details
   ansible.builtin.set_fact:
-    sv1: "{{ sv1 +  [item.split(':')[-1]] | map('trim') | list }}"
+    sv1: "{{ sv1 + [item.split(':')[-1]] | map('trim') | list }}"
   loop: "{{ ext_det1 }}"
   when: item is search("storage_volumes")
 
