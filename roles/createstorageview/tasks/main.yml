@@ -12,7 +12,7 @@
   collections:
     - dellemc.vplex
 
-- name: "Register Initiator with port_wwn {{createstorageview_init_1_wwn }}"
+- name: "Register Initiator with port_wwn {{ createstorageview_init_1_wwn }}"
   dellemc_vplex_initiator:
     <<: *conn_vars
     initiator_name: "{{ createstorageview_init_1_name }}"

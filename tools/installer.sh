@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
+#set -x
 
 
-python_ch_1="python3.6"
-python_ch_2="python2.7"
-ansible_ch_1="ansible2.9"
-ansible_ch_2="ansible2.10"
+python_ch_1="python3.13"
+ansible_ch_1="ansible2.18"
 repo='https://github.com/dell/python-vplex.git'
 vplex_mg_server_dir='/var/log/VPlex/cli'
 cmd_ver='--version'
@@ -36,10 +35,10 @@ get_install_method()
 				break
 				;;
 			"skip_collections")
-				if [[ $ans_ver == *"2.9"* ]]; then
+				if [[ $ans_ver == *"2.18"* ]]; then
 					method=2
 				else
-					error "copying modules is only supported for ansible 2.9"
+					error "copying modules is only supported for ansible 2.18"
 					error "Selected Ansible version $ans_ver"
 					exit 1
 				fi
@@ -56,8 +55,8 @@ get_install_method()
 
 get_vplex_sdk()
 {
-	sdks="sdk_7.0 sdk_6.2 quit"
-	echo "Please choose VPLEX python sdk: (recommended: 1)"
+	sdks="sdk_6.2 sdk_7.0 sdk_8.0 sdk_8.1 sdk_9.0 quit"
+	echo -e "Please choose VPLEX python sdk: (recommended: 2) \nInfo: sdk_6.2 is supported only up to Python 3.6 "
 	select sdk in $sdks;
 	do
 		case $sdk in
@@ -65,6 +64,19 @@ get_vplex_sdk()
 				sdk='7.0'
 				break
 				;;
+			"sdk_8.0")
+                                sdk='8.0'
+                                break
+                                ;;
+			"sdk_8.1")
+                                sdk='8.1'
+                                break
+                                ;;
+                        "sdk_9.0")
+                                sdk='9.0'
+                                break
+                                ;;
+
 			"sdk_6.2")
 				sdk='6.2'
 				break
@@ -81,7 +93,7 @@ get_vplex_sdk()
 install_collections()
 {
 	info "Installing collections...."
-	ansible-galaxy collection install "$root_dir/"dellemc-vplex-* -p "$env_path/collections" &>> /dev/null
+	ansible-galaxy collection install "$root_dir/"dellemc-vplex-1.3.0.tar.gz -p "$env_path/collections" &>> /dev/null
 }
 
 
@@ -90,9 +102,9 @@ verify_setup()
 	echo
 	info "Verifying if all modules are accessible..."
 
-	if [ $method -eq 1 ];then
+	if [ "$method" -eq 1 ];then
 		verify_prefix='dellemc.vplex.'
-		export ANSIBLE_COLLECTIONS_PATHS=$env_path/collections
+		export ANSIBLE_COLLECTIONS_PATH="$env_path/collections"
 	fi
 
 	for each in "$root_dir/plugins/modules/"*; do
@@ -126,7 +138,6 @@ non_vplex_host()
 
 		info "Below commands can be used for same."
 		echo "
-	$pkg_tool install python2
 	$pkg_tool install python3 python3-pip
 		"
 	}
@@ -137,24 +148,19 @@ non_vplex_host()
 		then
 			if ! command -v pip &> /dev/null
 			then
-				if ! command -v pip2 &> /dev/null
+				if ! command -v pip3 &> /dev/null
 				then
-					if ! command -v pip3 &> /dev/null
-					then
-						error "Please install virtualenv or install pip and try again."
-						info 'pip install virtualenv'
-						suggest_cmd
-						exit
-					else
-						alias pip=pip3
-					fi
+					error "Please install virtualenv or install pip and try again."
+					info 'pip install virtualenv'
+					suggest_cmd
+					exit
 				else
-					alias pip=pip2
+					pip() { pip3 "$@"; }
 				fi
 			fi
 
 			info "Upgrading pip...."
-			$python_path -m pip install --upgrade pip &>> /dev/null
+			${python_path} -m pip install --upgrade pip &>> /dev/null
 			# shellcheck disable=SC2181
 			if [ $? -ne 0 ]; then
 				error "Upgrading pip failed. Please upgrade with appropriate access and try again."
@@ -181,23 +187,12 @@ non_vplex_host()
 
 	get_virtualenv_name()
 	{
-		versions="$python_ch_1 $python_ch_2 quit"
+		versions="$python_ch_1 quit"
 		echo "please choose the python version:  (recommended: 1)"
 		select  py_ver in $versions;
 		do
 			case $py_ver in
 				"$python_ch_1")
-					python_path=$( command -v "$py_ver" ) 2>> /dev/null
-					if ! command -v "$py_ver" &>> /dev/null
-					then
-						error "Python $py_ver is not installed in system. Please install and try again."
-						suggest_cmd
-						exit
-					else
-						break
-					fi
-					;;
-				"$python_ch_2")
 					python_path=$( command -v "$py_ver" ) 2>> /dev/null
 					if ! command -v "$py_ver" &>> /dev/null
 					then
@@ -217,24 +212,19 @@ non_vplex_host()
 
 
 		if [ "$REPLY" -eq 1 ]; then
-			env_name='py3.6'
+			env_name='py3.13'
 		elif [ "$REPLY" -eq 2 ]; then
 			env_name='py2.7'
 		fi
 
-		versions="$ansible_ch_1 $ansible_ch_2 quit"
+		versions="$ansible_ch_1 quit"
 		echo "please choose the ansible version: (recommended: 1)"
 		select ans_ver in $versions;
 		do
 			case $ans_ver in
 				"$ansible_ch_1")
-					env_name=$env_name'_ans2.9'
-					ans_ver='2.9'
-					break
-					;;
-				"$ansible_ch_2")
-					env_name=$env_name'_ans2.10'
-					ans_ver='2.10'
+					env_name=$env_name'_ans2.18'
+					ans_ver='2.18'
 					break
 					;;
 				"quit")
@@ -283,9 +273,9 @@ non_vplex_host()
 		info "Installing required packages..."
 		{
 			pip install --upgrade pip
-			pip install ansible==$ans_ver
-			pip install certifi==2020.12.5
-			pip install urllib3==1.26.3
+			pip install ansible-core=="$ans_ver"
+			pip install certifi
+			pip install urllib3
 			pip install six 
 		} >> /dev/null
 
@@ -300,8 +290,14 @@ non_vplex_host()
 	{
 		activate_venv
 
-		ver=$( ansible $cmd_ver | head -n 1 | cut -d' ' -f2 )
+		ansible_version_output="$(ansible "${cmd_ver}")"
+		rc=$?
+		ver="$(echo "${ansible_version_output}" | head -n 1 | cut -d' ' -f2)"
 		# info Ansible version: $ver
+		if [ $rc -ne 0 ]; then
+			error "Failed to get Ansible version."
+			exit 1
+		fi
 		if [[ $ver == *"2.9"* ]]; then
 			lib_path=$env_path/lib/$py_ver/site-packages/ansible
 
@@ -342,10 +338,10 @@ non_vplex_host()
 
 	activate_venv()
 	{
-		cwd=$PWD
-		cd "$env_path"
+		cwd=$(pwd)
+		cd "${env_path}" || exit
 		source bin/activate
-		cd "$cwd"
+		cd "${cwd}" || exit
 	}
 
 
@@ -353,19 +349,25 @@ non_vplex_host()
 
 	get_virtualenv_name	
 
+	method=1  # Initialize method to a default value to avoid unbound variable errors
 	get_install_method
 	get_vplex_sdk
 
-	env_path=$HOME/.$env_name
+	# Ensure env_name is set before using it
+	if [[ -z "${env_name}" ]]; then
+		error "env_name is not set. Please check get_virtualenv_name function."
+		exit 1
+	fi
+	env_path=$HOME/.${env_name}
 
 	create_virtual_env
 
 	install_packages
 
 	activate_venv
-	if [ $method -eq 1 ];then
+	if [[ ${method} -eq 1 ]];then
 		install_collections
-	elif [ $method -eq 2 ];then
+	elif [[ ${method} -eq 2 ]];then
 		copy_modules
 	fi
 
@@ -373,27 +375,27 @@ non_vplex_host()
 	verify_setup
 
 
-	if [ $method -eq 1 ];then
+	if [[ ${method} -eq 1 ]];then
 		echo
-		info "Installed collections can be found in $env_path/collections"
-		info "Sample playbooks can be found in $root_dir/docs/"
-	elif [ $method -eq 2 ];then
+		info "Installed collections can be found in ${env_path}/collections"
+		info "Sample playbooks can be found in ${root_dir}/docs/"
+	elif [[ ${method} -eq 2 ]];then
 		echo
-		info "Copied modules can be found in $env_path/ python library path."
-		info "Sample playbooks can be found in $root_dir/docs/"
-		info "In order to use sample roles, please copy $root_dir/roles to  $root_dir/docs/samples"
+		info "Copied modules can be found in ${env_path}/ python library path."
+		info "Sample playbooks can be found in ${root_dir}/docs/"
+		info "In order to use sample roles, please copy ${root_dir}/roles to  $root_dir/docs/samples"
 	fi
 
 	echo
 	info "Run below command to activate virtualenv and run playbooks..."
 	echo "
-	source $env_path/bin/activate"
+	source ${env_path}/bin/activate"
 
 
 	# info "Please export below paths"
-	if [ $method -eq 1 ];then
+	if [[ ${method} -eq 1 ]];then
 		echo "\
-	export ANSIBLE_COLLECTIONS_PATHS=$env_path/collections"
+	export ANSIBLE_COLLECTIONS_PATH=$env_path/collections"
 	fi
 
 	python_path=''
@@ -451,9 +453,9 @@ vplex_host()
 	get_install_method
 
 	
-	if [ $method -eq 1 ];then
+	if [[ ${method} -eq 1 ]];then
 		install_collections
-	elif [ $method -eq 2 ];then
+	elif [[ ${method} -eq 2 ]];then
 		copy_modules	
 		export ANSIBLE_LIBRARY=$env_path/ansible_modules/modules
 		export ANSIBLE_MODULE_UTILS=$env_path/ansible_modules/module_utils
@@ -463,28 +465,28 @@ vplex_host()
 
 	verify_setup
 	echo
-	info "Sample playbooks can be found in $root_dir/docs/"
-	info "In order to use sample roles, please copy $root_dir/roles to  $root_dir/docs/samples"
+	info "Sample playbooks can be found in ${root_dir}/docs/"
+	info "In order to use sample roles, please copy ${root_dir}/roles to  $root_dir/docs/samples"
 	
 	echo
 	info "Run below command to export environment variables and run playbooks..."
 	echo
 
 
-	if [ $method -eq 1 ];then
+	if [[ ${method} -eq 1 ]];then
 		echo "\
-	export ANSIBLE_COLLECTIONS_PATHS=$env_path/collections"
-	elif [ $method -eq 2 ];then
+	export ANSIBLE_COLLECTIONS_PATH=${env_path}/collections"
+	elif [[ ${method} -eq 2 ]];then
 		echo "\
-	export ANSIBLE_LIBRARY=$env_path/ansible_modules/modules
-	export ANSIBLE_MODULE_UTILS=$env_path/ansible_modules/module_utils
-	export ANSIBLE_DOC_FRAGMENT_PLUGINS=$env_path/ansible_modules/doc_fragments"
+	export ANSIBLE_LIBRARY=${env_path}/ansible_modules/modules
+	export ANSIBLE_MODULE_UTILS=${env_path}/ansible_modules/module_utils
+	export ANSIBLE_DOC_FRAGMENT_PLUGINS=${env_path}/ansible_modules/doc_fragments"
 	fi
 
 	echo
 }
 
-if [ -d $vplex_mg_server_dir ];then
+if [[ -d ${vplex_mg_server_dir} ]];then
 	# install in vplex setup
 	vplex_host
 else

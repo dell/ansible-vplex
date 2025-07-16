@@ -63,9 +63,17 @@
 
     - name: List of virtual volumes to perform cache invalidate
       ansible.builtin.set_fact:
-        cache_virtual_volumes: "{{ cache_virtual_volumes +
-          virtual_volumes.VirtualVolumes | difference
-          (virtual_volumes_unexported.VirtualVolumes) | list }}"
+        cache_virtual_volumes: >-
+          {{
+            (
+              cache_virtual_volumes +
+              (
+                virtual_volumes.VirtualVolumes
+                | difference(virtual_volumes_unexported.VirtualVolumes)
+                | list
+              )
+            )
+          }}
 
     - name: Display cache virtual volumes
       ansible.builtin.debug:

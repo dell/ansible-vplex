@@ -27,7 +27,11 @@ authors:
 - Aman Kumar Sahani <vplex.ansible@dell.com>
 - Yogesh Rao Sarode <vplex.ansible@dell.com>
 
-
+build_ignore:
+  - changelogs/
+  - changelogs/*
+  - sanity_logs/
+  - sanity_logs/*
 ### OPTIONAL but strongly recommended
 
 # A short summary description of the collection

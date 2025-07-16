@@ -58,8 +58,7 @@
 
 - name: Get the storage volumes names
   ansible.legacy.set_fact:
-    stor_vol: "{{ volume_claimed_2['results'] | map(attribute=
-          'storage_details.name') | list }}"
+    stor_vol: "{{ volume_claimed_2['results'] | map(attribute='storage_details.name') | list }}"
 
 - name: Log stor_vol set_fact data
   ansible.legacy.debug:
@@ -83,13 +82,12 @@
 
 - name: Get the extent names
   ansible.builtin.set_fact:
-    extent: "{{ extent_det['results'] | map(attribute=
-          'extent_details.name') | list }}"
+    extent: "{{ extent_det['results'] | map(attribute='extent_details.name') | list }}"
 
 - name: Set_fact to split the even extents for device creation
   ansible.builtin.set_fact:
     extent_list: "{{ extent_list + [[extent[item], extent[item + 1]]] }}"
-  loop: "{{ range(0, extent|length, 2) | list }}"
+  loop: "{{ range(0, extent | length, 2) | list }}"
   when: extent|length  % 2 == 0
 
 - name: Log extent_list after splitting even extents
@@ -100,7 +98,7 @@
 - name: Set_fact to split the odd extents for device creation
   ansible.legacy.set_fact:
     extent_list1: "{{ extent_list1 + [[extent[item], extent[item + 1]]] }}"
-  loop: "{{ range(0, extent|length - 1, 2) | list }}"
+  loop: "{{ range(0, extent | length - 1, 2) | list }}"
   when: extent|length  % 2 != 0
 
 - name: Log extent_list1 after splitting odd extents
@@ -111,7 +109,7 @@
 - name: Set_fact to store last extent for odd extent
   ansible.legacy.set_fact:
     extent_list1: "{{ extent_list + [[extent[item]]] }}"
-  loop: "{{ range(extent|length - 1,extent|length) | list }}"
+  loop: "{{ range(extent | length - 1, extent | length) | list }}"
   when: extent|length  % 2 != 0
 
 - name: Log extent_list1 after storing last odd extent
@@ -136,8 +134,7 @@
 
 - name: Get the even device names
   ansible.legacy.set_fact:
-    device: "{{ device_det['results'] | map(attribute=
-          'device_details.name') | list }}"
+    device: "{{ device_det['results'] | map(attribute='device_details.name') | list }}"
   when: extent|length  % 2 == 0
 
 - name: Debug device_det results
@@ -161,8 +158,7 @@
 
 - name: Get the device names
   ansible.legacy.set_fact:
-    device: "{{ device_det1['results'] | map(attribute=
-          'device_details.name') | list }}"
+    device: "{{ device_det1['results'] | map(attribute='device_details.name') | list }}"
   when: extent|length  % 2 != 0
 
 - name: Wait for each device to finish rebuilding
