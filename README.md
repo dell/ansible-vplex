@@ -38,7 +38,7 @@ The modules are written in such a way that all requests are idempotent. It essen
   * Gather facts module
   * Data migration module
   * Maps module
-    
+  
 ## Installation of SDK
   * git clone https://github.com/dell/python-vplex.git  
   
