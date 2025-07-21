@@ -38,7 +38,7 @@ The modules are written in such a way that all requests are idempotent. It essen
   * Gather facts module
   * Data migration module
   * Maps module
-
+  
 ## Installation of SDK
   * git clone https://github.com/dell/python-vplex.git  
   
@@ -62,7 +62,7 @@ The modules are written in such a way that all requests are idempotent. It essen
         ansible-doc dellemc.vplex.dellemc_vplex_gatherfacts
 
 ## Running Ansible Modules
-The Ansible server must be configured with Python library for VPLEX to run the Ansible playbooks. The [Documents]( https://github.com/dell/ansible-vplex/tree/1.2.0/dellemc_ansible/docs ) provide information on different Ansible modules along with their functions and syntax. The parameters table in the Product Guide provides information on various parameters which needs to be configured before running the modules.
+The Ansible server must be configured with Python library for VPLEX to run the Ansible playbooks. The [Documents]( https://github.com/dell/ansible-vplex/tree/1.3.0/dellemc_ansible/docs ) provide information on different Ansible modules along with their functions and syntax. The parameters table in the Product Guide provides information on various parameters which needs to be configured before running the modules.
 
 ## SSL Certificate Validation
   * Copy the CA certificate to this "/etc/pki/ca-trust/source/anchors" path of the host by any external means.
