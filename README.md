@@ -9,12 +9,13 @@ Ansible modules for VPLEX are supported by Dell EMC and are provided under the t
 ## Supported Platforms
   * Dell VPLEX GeoSynchrony 6.2
   * Metro Node 7.0
+  * Metro Node 9.0
 
 ## Prerequisites
-  * Ansible 2.9, 2.10
-  * Python 2.7.18, 3.6.9
-  * VPLEX Python SDK 6.2, 7.0
-  * Red Hat Enterprise Linux 7.5, 7.6, 8.1
+  * Ansible 2.18
+  * Python 3.13
+  * VPLEX Python SDK 6.2, 7.0, 8.0, 8.0.1, 9.0
+  * Red Hat Enterprise Linux 7.5, 7.6, 8.1, 9.4
   * Cent OS 7.6
   * SLES (SUSE Linux Enterprise Server) SLES 15 SP1 (For Metro node - VPLEX Management server)
 
@@ -38,30 +39,6 @@ The modules are written in such a way that all requests are idempotent. It essen
   * Data migration module
   * Maps module
 
-## Auto Installation by installer utility
-  * ansible_vplex modules can be installed using auto installer utility or manually.
-  * Using installer, user will be able to choose the type of installation (copy modules to python library or install collections).
-  * installer.sh can be found in tools directory of ansible_vplex repo, and launched using below command.
-  * As per user inputs installer will setup virtual environment and install all required packages, including latest vplexapi library.
- 
-        $ chmod +x installer.sh
-        $ ./installer.sh
-          OR
-        $ source installer.sh
-  
-  * Installer will verify if all modules are installed as expected and accessible in user environment.
-  * Once installation is completed, installer will provide information regarding installation path.
-  * Installer will suggest commands to activate the virtual environment and export environment variable in order to use modules.
-
-        Info: Installed collections can be found in /root/.py3.6_ans2.10/collections
-
-        Info: Run below command to activate virtualenv and run playbook...
-
-              source /root/.py3.6_ans2.10/bin/activate
-              export ANSIBLE_COLLECTIONS_PATHS=/root/.py3.6_ans2.10/collections
-              export PYTHONPATH=/root/Downloads/python-vplex/vplexapi-6.3.0.0
-
-
 ## Installation of SDK
   * git clone https://github.com/dell/python-vplex.git  
   
@@ -71,7 +48,7 @@ The modules are written in such a way that all requests are idempotent. It essen
 
 ## Installing Collections
   * Download the tar build and follow the below command to install the collection anywhere in your system:
-        ansible-galaxy collection install dellemc-vplex-1.2.0.tar.gz -p ./collections
+        ansible-galaxy collection install dellemc-vplex-1.3.0.tar.gz -p ./collections
 
   * Set the environment variable:
         export ANSIBLE_COLLECTIONS_PATHS=$ANSIBLE_COLLECTIONS_PATHS:<install_path>/collections
